@@ -7,6 +7,7 @@ const els = {
   style: document.querySelector("#styleInput"),
   ratio: document.querySelector("#ratioInput"),
   frame: document.querySelector("#frameInput"),
+  format: document.querySelector("#formatInput"),
   duration: document.querySelector("#durationInput"),
   fps: document.querySelector("#fpsInput"),
   width: document.querySelector("#widthInput"),
@@ -24,7 +25,9 @@ const els = {
   canvas: document.querySelector("#previewCanvas"),
   videoResult: document.querySelector("#videoResult"),
   videoPreview: document.querySelector("#videoPreview"),
+  videoOpen: document.querySelector("#videoOpen"),
   videoDownload: document.querySelector("#videoDownload"),
+  videoShare: document.querySelector("#videoShare"),
 };
 
 const ctx = els.canvas.getContext("2d");
@@ -33,6 +36,7 @@ let panels = [];
 let previewStart = performance.now();
 let exporting = false;
 let videoUrl = null;
+let exportedVideoFile = null;
 
 const ease = (t) => 0.5 - Math.cos(Math.PI * t) / 2;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -51,6 +55,7 @@ function readSettings() {
     style: els.style.value,
     ratio: els.ratio.value,
     frame: els.frame.value,
+    format: els.format.value,
     duration: clamp(Number(els.duration.value) || 2.2, 0.8, 10),
     fps: clamp(Number(els.fps.value) || 30, 12, 60),
     width: clamp(Number(els.width.value) || 1080, 320, 2160),
@@ -165,8 +170,11 @@ function clearGeneratedVideo() {
   if (!videoUrl) return;
   URL.revokeObjectURL(videoUrl);
   videoUrl = null;
+  exportedVideoFile = null;
   els.videoPreview.removeAttribute("src");
+  els.videoOpen.removeAttribute("href");
   els.videoDownload.removeAttribute("href");
+  els.videoShare.hidden = true;
   els.videoResult.hidden = true;
 }
 
@@ -467,17 +475,65 @@ function previewLoop(now) {
   requestAnimationFrame(previewLoop);
 }
 
-function bestMimeType() {
-  const types = [
+function supportedVideoType(format) {
+  const mp4Types = [
+    "video/mp4;codecs=avc1.42E01E",
+    "video/mp4;codecs=h264",
+    "video/mp4",
+  ];
+  const webmTypes = [
     "video/webm;codecs=vp9",
     "video/webm;codecs=vp8",
     "video/webm",
   ];
-  return types.find((type) => MediaRecorder.isTypeSupported(type)) || "";
+  const findSupported = (types, ext, label) => {
+    const mime = types.find((type) => MediaRecorder.isTypeSupported(type));
+    return mime ? { mime, ext, label } : null;
+  };
+
+  const mp4 = findSupported(mp4Types, "mp4", "MP4");
+  const webm = findSupported(webmTypes, "webm", "WebM");
+
+  if (format === "mp4") return mp4 || webm;
+  if (format === "webm") return webm || mp4;
+  return mp4 || webm || { mime: "", ext: "webm", label: "video" };
+}
+
+function canShareVideo(file) {
+  try {
+    return Boolean(
+      navigator.canShare &&
+        navigator.share &&
+        file &&
+        navigator.canShare({ files: [file] }),
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function shareVideo() {
+  if (!exportedVideoFile || !canShareVideo(exportedVideoFile)) return;
+
+  try {
+    await navigator.share({
+      files: [exportedVideoFile],
+      title: "Split animation video",
+      text: "Video exported from Image Split Video Studio.",
+    });
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      setStatus("Could not open the share sheet. Use Open Video or Download instead.", true);
+    }
+  }
 }
 
 async function exportVideo() {
   if (!panels.length || exporting) return;
+  if (!window.MediaRecorder) {
+    setStatus("This browser does not support video export. Try Chrome, Edge, or Safari.", true);
+    return;
+  }
 
   exporting = true;
   els.export.disabled = true;
@@ -488,8 +544,17 @@ async function exportVideo() {
   const exportCtx = exportCanvas.getContext("2d");
   const stream = exportCanvas.captureStream(settings.fps);
   const chunks = [];
-  const mimeType = bestMimeType();
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  const videoType = supportedVideoType(settings.format);
+  let recorder;
+
+  try {
+    recorder = new MediaRecorder(stream, videoType.mime ? { mimeType: videoType.mime } : undefined);
+  } catch {
+    exporting = false;
+    els.export.disabled = false;
+    setStatus("This browser could not start video export with the selected format. Try Auto mobile friendly.", true);
+    return;
+  }
 
   recorder.ondataavailable = (event) => {
     if (event.data.size) chunks.push(event.data);
@@ -514,22 +579,35 @@ async function exportVideo() {
   recorder.stop();
   await done;
 
-  const blob = new Blob(chunks, { type: mimeType || "video/webm" });
+  const blobType = recorder.mimeType || videoType.mime || `video/${videoType.ext}`;
+  const blob = new Blob(chunks, { type: blobType });
   if (videoUrl) URL.revokeObjectURL(videoUrl);
   videoUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  const fileName = `split-animation-${settings.ratio.replace(":", "x")}-${Date.now()}.webm`;
-  link.href = videoUrl;
-  link.download = fileName;
-  link.click();
+  const fileName = `split-animation-${settings.ratio.replace(":", "x")}-${Date.now()}.${videoType.ext}`;
+  exportedVideoFile = new File([blob], fileName, { type: blobType });
   els.videoPreview.src = videoUrl;
+  els.videoPreview.load();
+  els.videoOpen.href = videoUrl;
   els.videoDownload.href = videoUrl;
   els.videoDownload.download = fileName;
+  els.videoOpen.textContent = `Open ${videoType.label}`;
+  els.videoDownload.textContent = `Download ${videoType.label}`;
+  els.videoShare.hidden = !canShareVideo(exportedVideoFile);
   els.videoResult.hidden = false;
 
   exporting = false;
   els.export.disabled = false;
-  setStatus("Video exported as WebM. Preview is ready below the canvas.");
+  const fallback =
+    settings.format === "mp4" && videoType.ext !== "mp4"
+      ? " MP4 is not supported in this browser, so WebM was used."
+      : settings.format === "webm" && videoType.ext !== "webm"
+        ? " WebM is not supported in this browser, so MP4 was used."
+        : "";
+  const mobileNote =
+    videoType.ext === "webm"
+      ? " Some phones, especially iPhones, cannot open WebM; use a browser/device that supports MP4 export if needed."
+      : "";
+  setStatus(`Video exported as ${videoType.label}. Use the preview, Open Video, Download, or Share below the canvas.${fallback}${mobileNote}`);
 }
 
 function downloadPanels() {
@@ -589,6 +667,7 @@ loadSampleFromQuery();
 els.split.addEventListener("click", splitImage);
 els.download.addEventListener("click", downloadPanels);
 els.export.addEventListener("click", exportVideo);
+els.videoShare.addEventListener("click", shareVideo);
 
 els.autoLayout.addEventListener("change", () => {
   applyAutoLayout();

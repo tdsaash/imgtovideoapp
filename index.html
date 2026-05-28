@@ -74,6 +74,14 @@
                 <option value="fill">Fill frame</option>
               </select>
             </label>
+            <label>
+              Video format
+              <select id="formatInput">
+                <option value="auto" selected>Auto mobile friendly</option>
+                <option value="mp4">MP4 if supported</option>
+                <option value="webm">WebM</option>
+              </select>
+            </label>
           </div>
 
           <div class="controlGrid">
@@ -134,7 +142,11 @@
             </div>
             <div id="videoResult" class="videoResult" hidden>
               <video id="videoPreview" controls playsinline></video>
-              <a id="videoDownload" class="downloadLink" href="#" download>Download video</a>
+              <div class="videoActions">
+                <a id="videoOpen" class="downloadLink" href="#" target="_blank" rel="noopener">Open Video</a>
+                <a id="videoDownload" class="downloadLink" href="#" download>Download video</a>
+                <button id="videoShare" class="shareButton" type="button" hidden>Share</button>
+              </div>
             </div>
           </div>
           <div class="filmstrip" id="filmstrip" aria-label="Split image panels"></div>

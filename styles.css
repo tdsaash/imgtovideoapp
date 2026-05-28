@@ -260,7 +260,14 @@ canvas {
   border-radius: 6px;
 }
 
-.downloadLink {
+.videoActions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.downloadLink,
+.shareButton {
   display: grid;
   place-items: center;
   min-height: 42px;
@@ -269,6 +276,14 @@ canvas {
   border-radius: 6px;
   text-decoration: none;
   font-weight: 800;
+}
+
+.shareButton {
+  border-radius: 6px;
+}
+
+.shareButton[hidden] {
+  display: none;
 }
 
 .filmstrip {
@@ -324,7 +339,8 @@ canvas {
   }
 
   .controlGrid,
-  .actions {
+  .actions,
+  .videoActions {
     grid-template-columns: 1fr;
   }
 
