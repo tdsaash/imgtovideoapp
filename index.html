@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Split Video Studio</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="workspace">
+        <aside class="panel controls" aria-label="Controls">
+          <div class="brand">
+            <div class="mark">IV</div>
+            <div>
+              <h1>Image Split Video Studio</h1>
+              <p>Split one grid image into animated scenes and export a video.</p>
+            </div>
+          </div>
+
+          <label class="dropzone" for="imageInput">
+            <input id="imageInput" type="file" accept="image/*" />
+            <span class="dropIcon">+</span>
+            <strong>Upload grid image</strong>
+            <small>Best for 3 x 5 comic or story panels like your sample.</small>
+          </label>
+
+          <div class="controlGrid">
+            <label>
+              Columns
+              <input id="colsInput" type="number" min="1" max="12" value="3" />
+            </label>
+            <label>
+              Rows
+              <input id="rowsInput" type="number" min="1" max="20" value="5" />
+            </label>
+            <label>
+              Grid gap
+              <input id="gapInput" type="number" min="0" max="80" value="6" />
+            </label>
+            <label>
+              Outer crop
+              <input id="cropInput" type="number" min="0" max="80" value="0" />
+            </label>
+          </div>
+
+          <label>
+            Animation style
+            <select id="styleInput">
+              <option value="cinematic">Cinematic Push</option>
+              <option value="drift">Slow Drift</option>
+              <option value="reveal">Zoom Reveal</option>
+              <option value="pulse">Soft Pulse</option>
+              <option value="epic">Epic Parallax</option>
+              <option value="mixed">Mixed Styles</option>
+            </select>
+          </label>
+
+          <div class="controlGrid">
+            <label>
+              Video ratio
+              <select id="ratioInput">
+                <option value="fit">Fit to panels</option>
+                <option value="9:16" selected>9:16 Vertical</option>
+                <option value="1:1">1:1 Square</option>
+                <option value="4:5">4:5 Portrait</option>
+                <option value="16:9">16:9 Wide</option>
+              </select>
+            </label>
+            <label>
+              Image framing
+              <select id="frameInput">
+                <option value="fit" selected>Fit full image</option>
+                <option value="fill">Fill frame</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="controlGrid">
+            <label>
+              Seconds / panel
+              <input id="durationInput" type="number" min="0.8" max="10" step="0.1" value="2.2" />
+            </label>
+            <label>
+              FPS
+              <input id="fpsInput" type="number" min="12" max="60" value="30" />
+            </label>
+            <label>
+              Width
+              <input id="widthInput" type="number" min="320" max="2160" step="10" value="1080" />
+            </label>
+            <label>
+              Height
+              <input id="heightInput" type="number" min="320" max="3840" step="10" value="1920" />
+            </label>
+          </div>
+
+          <div class="switchRow">
+            <label class="check">
+              <input id="autoLayoutInput" type="checkbox" checked />
+              <span>Auto layout</span>
+            </label>
+            <label class="check">
+              <input id="autoGridInput" type="checkbox" checked />
+              <span>Auto grid cut</span>
+            </label>
+            <label class="check">
+              <input id="cleanNumbersInput" type="checkbox" checked />
+              <span>Hide source numbers</span>
+            </label>
+            <label class="check">
+              <input id="captionInput" type="checkbox" />
+              <span>Show scene label</span>
+            </label>
+            <label class="check">
+              <input id="blurInput" type="checkbox" checked />
+              <span>Blurred backdrop</span>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button id="splitBtn" type="button">Split Image</button>
+            <button id="downloadBtn" type="button" disabled>Download Panels</button>
+            <button id="exportBtn" type="button" disabled>Export Video</button>
+          </div>
+
+          <div id="status" class="status">Upload an image to begin.</div>
+        </aside>
+
+        <section class="stage" aria-label="Preview">
+          <div class="previewColumn">
+            <div class="previewShell">
+              <canvas id="previewCanvas" width="1080" height="1920"></canvas>
+            </div>
+            <div id="videoResult" class="videoResult" hidden>
+              <video id="videoPreview" controls playsinline></video>
+              <a id="videoDownload" class="downloadLink" href="#" download>Download video</a>
+            </div>
+          </div>
+          <div class="filmstrip" id="filmstrip" aria-label="Split image panels"></div>
+        </section>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
