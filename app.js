@@ -28,6 +28,7 @@ const els = {
   videoOpen: document.querySelector("#videoOpen"),
   videoDownload: document.querySelector("#videoDownload"),
   videoShare: document.querySelector("#videoShare"),
+  youtubeUpload: document.querySelector("#youtubeUpload"),
 };
 
 const ctx = els.canvas.getContext("2d");
@@ -528,6 +529,11 @@ async function shareVideo() {
   }
 }
 
+function openYoutubeUpload() {
+  if (!exportedVideoFile) return;
+  setStatus("YouTube Studio is opening. Download the exported video or use Share, then select that file in YouTube.");
+}
+
 async function exportVideo() {
   if (!panels.length || exporting) return;
   if (!window.MediaRecorder) {
@@ -607,7 +613,7 @@ async function exportVideo() {
     videoType.ext === "webm"
       ? " Some phones, especially iPhones, cannot open WebM; use a browser/device that supports MP4 export if needed."
       : "";
-  setStatus(`Video exported as ${videoType.label}. Use the preview, Open Video, Download, or Share below the canvas.${fallback}${mobileNote}`);
+  setStatus(`Video exported as ${videoType.label}. Use Download, Share, or YouTube below the canvas.${fallback}${mobileNote}`);
 }
 
 function downloadPanels() {
@@ -668,6 +674,7 @@ els.split.addEventListener("click", splitImage);
 els.download.addEventListener("click", downloadPanels);
 els.export.addEventListener("click", exportVideo);
 els.videoShare.addEventListener("click", shareVideo);
+els.youtubeUpload.addEventListener("click", openYoutubeUpload);
 
 els.autoLayout.addEventListener("change", () => {
   applyAutoLayout();

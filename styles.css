@@ -262,12 +262,13 @@ canvas {
 
 .videoActions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
 }
 
 .downloadLink,
-.shareButton {
+.shareButton,
+.youtubeLink {
   display: grid;
   place-items: center;
   min-height: 42px;
@@ -276,6 +277,11 @@ canvas {
   border-radius: 6px;
   text-decoration: none;
   font-weight: 800;
+}
+
+.youtubeLink {
+  color: #fff;
+  background: #ff0033;
 }
 
 .shareButton {
