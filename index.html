@@ -18,118 +18,185 @@
             </div>
           </div>
 
-          <label class="dropzone" for="imageInput">
-            <input id="imageInput" type="file" accept="image/*" />
-            <span class="dropIcon">+</span>
-            <strong>Upload grid image</strong>
-            <small>Best for 3 x 5 comic or story panels like your sample.</small>
-          </label>
-
-          <div class="controlGrid">
-            <label>
-              Columns
-              <input id="colsInput" type="number" min="1" max="12" value="3" />
-            </label>
-            <label>
-              Rows
-              <input id="rowsInput" type="number" min="1" max="20" value="5" />
-            </label>
-            <label>
-              Grid gap
-              <input id="gapInput" type="number" min="0" max="80" value="6" />
-            </label>
-            <label>
-              Outer crop
-              <input id="cropInput" type="number" min="0" max="80" value="0" />
-            </label>
+          <div class="tabs" role="tablist" aria-label="Workspace">
+            <button id="videoTab" class="tabButton active" type="button" role="tab" aria-selected="true" aria-controls="videoControls">Video</button>
+            <button id="imageTab" class="tabButton" type="button" role="tab" aria-selected="false" aria-controls="imageControls">AI Image</button>
           </div>
 
-          <label>
-            Animation style
-            <select id="styleInput">
-              <option value="cinematic">Cinematic Push</option>
-              <option value="drift">Slow Drift</option>
-              <option value="reveal">Zoom Reveal</option>
-              <option value="pulse">Soft Pulse</option>
-              <option value="epic">Epic Parallax</option>
-              <option value="mixed">Mixed Styles</option>
-            </select>
-          </label>
+          <div id="videoControls" class="tabPane active" role="tabpanel" aria-labelledby="videoTab">
+            <label class="dropzone" for="imageInput">
+              <input id="imageInput" type="file" accept="image/*" />
+              <span class="dropIcon">+</span>
+              <strong>Upload grid image</strong>
+              <small>Best for 3 x 5 comic or story panels like your sample.</small>
+            </label>
 
-          <div class="controlGrid">
+            <div class="controlGrid">
+              <label>
+                Columns
+                <input id="colsInput" type="number" min="1" max="12" value="3" />
+              </label>
+              <label>
+                Rows
+                <input id="rowsInput" type="number" min="1" max="20" value="5" />
+              </label>
+              <label>
+                Grid gap
+                <input id="gapInput" type="number" min="0" max="80" value="6" />
+              </label>
+              <label>
+                Outer crop
+                <input id="cropInput" type="number" min="0" max="80" value="0" />
+              </label>
+            </div>
+
             <label>
-              Video ratio
-              <select id="ratioInput">
-                <option value="fit">Fit to panels</option>
-                <option value="9:16" selected>9:16 Vertical</option>
-                <option value="1:1">1:1 Square</option>
-                <option value="4:5">4:5 Portrait</option>
-                <option value="16:9">16:9 Wide</option>
+              Animation style
+              <select id="styleInput">
+                <option value="cinematic">Cinematic Push</option>
+                <option value="drift">Slow Drift</option>
+                <option value="reveal">Zoom Reveal</option>
+                <option value="pulse">Soft Pulse</option>
+                <option value="epic">Epic Parallax</option>
+                <option value="mixed">Mixed Styles</option>
               </select>
             </label>
+
             <label>
-              Image framing
-              <select id="frameInput">
-                <option value="fit" selected>Fit full image</option>
-                <option value="fill">Fill frame</option>
+              Effect style
+              <select id="effectInput">
+                <option value="none" selected>None</option>
+                <option value="cinematic-ai">Cinematic AI</option>
+                <option value="anime-glow">Anime Glow</option>
+                <option value="action-shake">Action Shake</option>
+                <option value="dream-blur">Dream Blur</option>
+                <option value="vintage-film">Vintage Film</option>
               </select>
             </label>
-            <label>
-              Video format
-              <select id="formatInput">
-                <option value="auto" selected>Auto mobile friendly</option>
-                <option value="mp4">MP4 if supported</option>
-                <option value="webm">WebM</option>
-              </select>
-            </label>
+
+            <div class="controlGrid">
+              <label>
+                Video ratio
+                <select id="ratioInput">
+                  <option value="fit">Fit to panels</option>
+                  <option value="9:16" selected>9:16 Vertical</option>
+                  <option value="1:1">1:1 Square</option>
+                  <option value="4:5">4:5 Portrait</option>
+                  <option value="16:9">16:9 Wide</option>
+                </select>
+              </label>
+              <label>
+                Image framing
+                <select id="frameInput">
+                  <option value="fit" selected>Fit full image</option>
+                  <option value="fill">Fill frame</option>
+                </select>
+              </label>
+              <label>
+                Video format
+                <select id="formatInput">
+                  <option value="auto" selected>Auto mobile friendly</option>
+                  <option value="mp4">MP4 if supported</option>
+                  <option value="webm">WebM</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="controlGrid">
+              <label>
+                Seconds / panel
+                <input id="durationInput" type="number" min="0.8" max="10" step="0.1" value="2.2" />
+              </label>
+              <label>
+                FPS
+                <input id="fpsInput" type="number" min="12" max="60" value="30" />
+              </label>
+              <label>
+                Width
+                <input id="widthInput" type="number" min="320" max="2160" step="10" value="1080" />
+              </label>
+              <label>
+                Height
+                <input id="heightInput" type="number" min="320" max="3840" step="10" value="1920" />
+              </label>
+            </div>
+
+            <div class="switchRow">
+              <label class="check">
+                <input id="autoLayoutInput" type="checkbox" checked />
+                <span>Auto layout</span>
+              </label>
+              <label class="check">
+                <input id="autoGridInput" type="checkbox" checked />
+                <span>Auto grid cut</span>
+              </label>
+              <label class="check">
+                <input id="cleanNumbersInput" type="checkbox" checked />
+                <span>Hide source numbers</span>
+              </label>
+              <label class="check">
+                <input id="captionInput" type="checkbox" />
+                <span>Show scene label</span>
+              </label>
+              <label class="check">
+                <input id="blurInput" type="checkbox" checked />
+                <span>Blurred backdrop</span>
+              </label>
+            </div>
+
+            <div class="actions">
+              <button id="splitBtn" type="button">Split Image</button>
+              <button id="downloadBtn" type="button" disabled>Download Panels</button>
+              <button id="exportBtn" type="button" disabled>Export Video</button>
+            </div>
           </div>
 
-          <div class="controlGrid">
+          <div id="imageControls" class="tabPane" role="tabpanel" aria-labelledby="imageTab" hidden>
             <label>
-              Seconds / panel
-              <input id="durationInput" type="number" min="0.8" max="10" step="0.1" value="2.2" />
+              Prompt
+              <textarea id="promptInput" rows="5" placeholder="A dramatic comic panel of a hero entering a neon city, rain, cinematic lighting"></textarea>
             </label>
-            <label>
-              FPS
-              <input id="fpsInput" type="number" min="12" max="60" value="30" />
-            </label>
-            <label>
-              Width
-              <input id="widthInput" type="number" min="320" max="2160" step="10" value="1080" />
-            </label>
-            <label>
-              Height
-              <input id="heightInput" type="number" min="320" max="3840" step="10" value="1920" />
-            </label>
-          </div>
 
-          <div class="switchRow">
-            <label class="check">
-              <input id="autoLayoutInput" type="checkbox" checked />
-              <span>Auto layout</span>
-            </label>
-            <label class="check">
-              <input id="autoGridInput" type="checkbox" checked />
-              <span>Auto grid cut</span>
-            </label>
-            <label class="check">
-              <input id="cleanNumbersInput" type="checkbox" checked />
-              <span>Hide source numbers</span>
-            </label>
-            <label class="check">
-              <input id="captionInput" type="checkbox" />
-              <span>Show scene label</span>
-            </label>
-            <label class="check">
-              <input id="blurInput" type="checkbox" checked />
-              <span>Blurred backdrop</span>
-            </label>
-          </div>
+            <div class="controlGrid">
+              <label>
+                Provider
+                <select id="imageProviderInput">
+                  <option value="pollinations" selected>Pollinations Free</option>
+                  <option value="huggingface">Hugging Face</option>
+                </select>
+              </label>
+              <label>
+                Image style
+                <select id="imageStyleInput">
+                  <option value="cinematic" selected>Cinematic</option>
+                  <option value="anime">Anime</option>
+                  <option value="cartoon">Cartoon</option>
+                  <option value="3d">3D Render</option>
+                  <option value="comic">Comic</option>
+                  <option value="realistic">Realistic</option>
+                  <option value="fantasy">Fantasy</option>
+                </select>
+              </label>
+              <label>
+                Model
+                <select id="imageModelInput">
+                  <option value="sana" selected>Sana Free</option>
+                  <option value="flux">Flux Better</option>
+                  <option value="gptimage-large">GPT Image Large</option>
+                  <option value="seedream">Seedream</option>
+                  <option value="kontext">Kontext</option>
+                  <option value="black-forest-labs/FLUX.1-dev">FLUX.1 Dev</option>
+                  <option value="stabilityai/stable-diffusion-xl-base-1.0">SDXL Base</option>
+                  <option value="runwayml/stable-diffusion-v1-5">Stable Diffusion 1.5</option>
+                </select>
+              </label>
+            </div>
 
-          <div class="actions">
-            <button id="splitBtn" type="button">Split Image</button>
-            <button id="downloadBtn" type="button" disabled>Download Panels</button>
-            <button id="exportBtn" type="button" disabled>Export Video</button>
+            <div class="actions imageActions">
+              <button id="generateImageBtn" type="button">Generate Image</button>
+              <button id="useGeneratedBtn" type="button" disabled>Use for Video</button>
+              <button id="downloadGeneratedBtn" type="button" disabled>Download Image</button>
+            </div>
           </div>
 
           <div id="status" class="status">Upload an image to begin.</div>
@@ -148,6 +215,9 @@
                 <button id="videoShare" class="shareButton" type="button" hidden>Share File</button>
                 <button id="youtubeUpload" class="youtubeLink" type="button">YouTube</button>
               </div>
+            </div>
+            <div id="imageResult" class="imageResult" hidden>
+              <img id="generatedImage" alt="Generated from prompt" />
             </div>
           </div>
           <div class="filmstrip" id="filmstrip" aria-label="Split image panels"></div>

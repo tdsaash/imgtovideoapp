@@ -27,7 +27,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -132,7 +133,8 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   min-height: 42px;
   color: var(--text);
@@ -142,10 +144,47 @@ select {
   padding: 0 12px;
 }
 
+textarea {
+  min-height: 132px;
+  padding: 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
 .controlGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px;
+  background: #13151b;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.tabButton {
+  min-height: 40px;
+  color: var(--muted);
+  background: transparent;
+}
+
+.tabButton.active {
+  color: #111;
+  background: var(--accent);
+}
+
+.tabPane {
+  display: grid;
+  gap: 18px;
+}
+
+.tabPane[hidden] {
+  display: none;
 }
 
 .switchRow {
@@ -172,6 +211,10 @@ select {
 }
 
 .actions button:first-child {
+  grid-column: 1 / -1;
+}
+
+.imageActions button:first-child {
   grid-column: 1 / -1;
 }
 
@@ -249,13 +292,32 @@ canvas {
   border-radius: 8px;
 }
 
-.videoResult[hidden] {
+.videoResult[hidden],
+.imageResult[hidden] {
   display: none;
 }
 
 .videoResult video {
   width: 100%;
   max-height: 60vh;
+  background: #05060a;
+  border-radius: 6px;
+}
+
+.imageResult {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(25, 27, 34, 0.96);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.imageResult img {
+  display: block;
+  width: 100%;
+  max-height: 72vh;
+  object-fit: contain;
   background: #05060a;
   border-radius: 6px;
 }
