@@ -514,7 +514,7 @@ function canShareVideo(file) {
 }
 
 async function shareVideo() {
-  if (!exportedVideoFile || !canShareVideo(exportedVideoFile)) return;
+  if (!exportedVideoFile || !canShareVideo(exportedVideoFile)) return false;
 
   try {
     await navigator.share({
@@ -522,16 +522,30 @@ async function shareVideo() {
       title: "Split animation video",
       text: "Video exported from Image Split Video Studio.",
     });
+    return true;
   } catch (error) {
     if (error.name !== "AbortError") {
       setStatus("Could not open the share sheet. Use Open Video or Download instead.", true);
     }
+    return false;
   }
 }
 
-function openYoutubeUpload() {
+async function openYoutubeUpload() {
   if (!exportedVideoFile) return;
-  setStatus("YouTube Studio is opening. Download the exported video or use Share, then select that file in YouTube.");
+  if (await shareVideo()) {
+    setStatus("Choose YouTube from the share sheet to upload this video.");
+    return;
+  }
+
+  setStatus("Opening the YouTube app. If it does not open, download the video and upload it from the YouTube app.");
+  window.location.href = "youtube://";
+
+  window.setTimeout(() => {
+    if (document.visibilityState === "visible") {
+      window.location.href = "https://www.youtube.com";
+    }
+  }, 900);
 }
 
 async function exportVideo() {
@@ -613,7 +627,7 @@ async function exportVideo() {
     videoType.ext === "webm"
       ? " Some phones, especially iPhones, cannot open WebM; use a browser/device that supports MP4 export if needed."
       : "";
-  setStatus(`Video exported as ${videoType.label}. Use Download, Share, or YouTube below the canvas.${fallback}${mobileNote}`);
+  setStatus(`Video exported as ${videoType.label}. Tap YouTube on mobile, then choose YouTube from the share sheet.${fallback}${mobileNote}`);
 }
 
 function downloadPanels() {

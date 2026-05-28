@@ -279,13 +279,14 @@ canvas {
   font-weight: 800;
 }
 
+.shareButton,
+.youtubeLink {
+  border-radius: 6px;
+}
+
 .youtubeLink {
   color: #fff;
   background: #ff0033;
-}
-
-.shareButton {
-  border-radius: 6px;
 }
 
 .shareButton[hidden] {
