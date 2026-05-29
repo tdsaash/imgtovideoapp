@@ -111,7 +111,8 @@ small {
 .audioDrop input,
 .editorDrop input,
 .editorAudioDrop input,
-.libraryAudioDrop input {
+.libraryAudioDrop input,
+.libraryVideoDrop input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
@@ -153,6 +154,14 @@ small {
 #audioPreview {
   width: 100%;
   min-height: 42px;
+}
+
+#libraryVideoPreview {
+  width: 100%;
+  max-height: 320px;
+  background: #05060a;
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 
 label {
@@ -303,7 +312,7 @@ textarea {
 
 .previewButtons {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -317,10 +326,23 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   cursor: grab;
+  animation: sceneRise 280ms ease both;
+  animation-delay: var(--delay, 0ms);
   transition:
     border-color 120ms ease,
     opacity 120ms ease,
     transform 120ms ease;
+}
+
+@keyframes sceneRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .editorScene:active {
@@ -397,6 +419,16 @@ button {
   background: var(--accent);
   font-weight: 800;
   cursor: pointer;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    filter 140ms ease;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+  filter: brightness(1.03);
 }
 
 button:disabled {
@@ -421,6 +453,23 @@ button:nth-child(3):not(:disabled) {
   border: 1px solid var(--line);
   border-radius: 6px;
   font-size: 0.88rem;
+}
+
+.status.loading {
+  color: #f4f2eb;
+  background:
+    linear-gradient(90deg, #13151b 0%, #242833 48%, #13151b 100%);
+  background-size: 220% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
 }
 
 .stage {

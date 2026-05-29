@@ -74,8 +74,12 @@ const els = {
   libraryAudioInput: document.querySelector("#libraryAudioInput"),
   libraryAudioPreview: document.querySelector("#libraryAudioPreview"),
   libraryAudioFileName: document.querySelector("#libraryAudioFileName"),
+  libraryVideoInput: document.querySelector("#libraryVideoInput"),
+  libraryVideoPreview: document.querySelector("#libraryVideoPreview"),
+  libraryVideoFileName: document.querySelector("#libraryVideoFileName"),
   useAudioInEditor: document.querySelector("#useAudioInEditorBtn"),
   useAudioInVideo: document.querySelector("#useAudioInVideoBtn"),
+  mixVideoAudio: document.querySelector("#mixVideoAudioBtn"),
   prompt: document.querySelector("#promptInput"),
   imageProvider: document.querySelector("#imageProviderInput"),
   imageStyle: document.querySelector("#imageStyleInput"),
@@ -126,6 +130,8 @@ let gridImage = null;
 let gridTiles = [];
 let libraryAudioFile = null;
 let libraryAudioUrl = null;
+let libraryVideoFile = null;
+let libraryVideoUrl = null;
 
 const ease = (t) => 0.5 - Math.cos(Math.PI * t) / 2;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -133,6 +139,7 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 function setStatus(message, isError = false) {
   els.status.textContent = message;
   els.status.style.color = isError ? "var(--danger)" : "var(--muted)";
+  els.status.classList.toggle("loading", !isError && /generating|rendering|mixing|loading/i.test(message));
 }
 
 function setActiveTab(tabName) {
@@ -363,6 +370,7 @@ function setLibraryAudioFile(file) {
   els.libraryAudioPreview.hidden = !libraryAudioUrl;
   els.useAudioInEditor.disabled = !libraryAudioFile;
   els.useAudioInVideo.disabled = !libraryAudioFile;
+  els.mixVideoAudio.disabled = !(libraryAudioFile && libraryVideoFile);
 
   if (libraryAudioUrl) {
     els.libraryAudioPreview.src = libraryAudioUrl;
@@ -370,6 +378,23 @@ function setLibraryAudioFile(file) {
     setStatus(`Loaded audio file: ${libraryAudioFile.name}`);
   } else {
     els.libraryAudioPreview.removeAttribute("src");
+  }
+}
+
+function setLibraryVideoFile(file) {
+  if (libraryVideoUrl) URL.revokeObjectURL(libraryVideoUrl);
+  libraryVideoFile = file || null;
+  libraryVideoUrl = libraryVideoFile ? URL.createObjectURL(libraryVideoFile) : null;
+  els.libraryVideoFileName.textContent = libraryVideoFile ? libraryVideoFile.name : "Add video to mix with audio";
+  els.libraryVideoPreview.hidden = !libraryVideoUrl;
+  els.mixVideoAudio.disabled = !(libraryAudioFile && libraryVideoFile);
+
+  if (libraryVideoUrl) {
+    els.libraryVideoPreview.src = libraryVideoUrl;
+    els.libraryVideoPreview.load();
+    setStatus(`Loaded video file: ${libraryVideoFile.name}`);
+  } else {
+    els.libraryVideoPreview.removeAttribute("src");
   }
 }
 
@@ -385,6 +410,104 @@ function useLibraryAudioInVideo() {
   setAudioFile(libraryAudioFile);
   setActiveTab("video");
   setStatus(`Audio added to Video: ${libraryAudioFile.name}`);
+}
+
+async function exportUploadedVideoWithAudio() {
+  if (!libraryVideoFile || !libraryAudioFile || exporting) return;
+  if (!window.MediaRecorder) {
+    setStatus("This browser does not support video export. Try Chrome or Edge.", true);
+    return;
+  }
+
+  exporting = true;
+  els.mixVideoAudio.disabled = true;
+  const sourceVideo = document.createElement("video");
+  sourceVideo.src = libraryVideoUrl;
+  sourceVideo.muted = true;
+  sourceVideo.playsInline = true;
+  sourceVideo.crossOrigin = "anonymous";
+  await new Promise((resolve, reject) => {
+    sourceVideo.onloadedmetadata = resolve;
+    sourceVideo.onerror = reject;
+  });
+
+  const stream = sourceVideo.captureStream ? sourceVideo.captureStream() : sourceVideo.mozCaptureStream?.();
+  if (!stream) {
+    exporting = false;
+    els.mixVideoAudio.disabled = false;
+    setStatus("This browser cannot capture uploaded video for export. Try Chrome or Edge.", true);
+    return;
+  }
+
+  stream.getAudioTracks().forEach((track) => stream.removeTrack(track));
+  let audioTrack = null;
+  try {
+    audioTrack = await createAudioTrackFromFile(libraryAudioFile, {
+      audioStart: 0,
+      audioEnd: sourceVideo.duration || 0,
+      audioFadeIn: 0,
+      audioFadeOut: 0,
+      audioVolume: 1,
+    });
+    if (audioTrack) audioTrack.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+  } catch {
+    setStatus("Could not prepare replacement audio.", true);
+  }
+
+  const hasAudioTrack = stream.getAudioTracks().length > 0;
+  const videoType = supportedVideoType("auto", hasAudioTrack);
+  const chunks = [];
+  let recorder;
+
+  try {
+    recorder = new MediaRecorder(stream, videoType.mime ? { mimeType: videoType.mime } : undefined);
+  } catch {
+    exporting = false;
+    els.mixVideoAudio.disabled = false;
+    if (audioTrack) audioTrack.close();
+    setStatus("Could not start video+audio export in this browser.", true);
+    return;
+  }
+
+  recorder.ondataavailable = (event) => {
+    if (event.data.size) chunks.push(event.data);
+  };
+  const done = new Promise((resolve) => {
+    recorder.onstop = resolve;
+  });
+
+  recorder.start();
+  if (audioTrack) audioTrack.start();
+  sourceVideo.currentTime = 0;
+  await sourceVideo.play();
+  setStatus("Mixing uploaded video with audio...");
+
+  await new Promise((resolve) => {
+    sourceVideo.onended = resolve;
+  });
+
+  recorder.stop();
+  await done;
+  if (audioTrack) audioTrack.close();
+
+  const blobType = recorder.mimeType || videoType.mime || `video/${videoType.ext}`;
+  const blob = new Blob(chunks, { type: blobType });
+  if (videoUrl) URL.revokeObjectURL(videoUrl);
+  videoUrl = URL.createObjectURL(blob);
+  const fileName = `video-with-audio-${Date.now()}.${videoType.ext}`;
+  exportedVideoFile = new File([blob], fileName, { type: blobType });
+  els.videoPreview.src = videoUrl;
+  els.videoPreview.load();
+  els.videoOpen.href = videoUrl;
+  els.videoDownload.href = videoUrl;
+  els.videoDownload.download = fileName;
+  els.videoOpen.textContent = `Open ${videoType.label}`;
+  els.videoDownload.textContent = `Download ${videoType.label}`;
+  els.videoShare.hidden = !canShareVideo(exportedVideoFile);
+  els.videoResult.hidden = false;
+  exporting = false;
+  els.mixVideoAudio.disabled = false;
+  setStatus(`Video exported with added audio as ${videoType.label}. Preview it below, then download.`);
 }
 
 function applyVideoRatio() {
@@ -602,12 +725,27 @@ function containRect(imgW, imgH, boxW, boxH, scale = 1) {
 }
 
 function movement(style, t, index) {
-  const m = style === "mixed" ? ["cinematic", "drift", "reveal", "pulse", "epic"][index % 5] : style;
+  const m = style === "mixed"
+    ? ["cinematic", "drift", "reveal", "pulse", "epic", "story-reel", "mythic-cinema", "ghibli-soft", "pixar-3d", "float-3d", "smooth-pan"][index % 11]
+    : style;
   const e = ease(t);
   if (m === "drift") return { scale: 1.04, x: (0.5 - e) * 46, y: Math.sin(t * Math.PI) * -20, rotate: 0 };
   if (m === "reveal") return { scale: 0.9 + e * 0.26, x: 0, y: (1 - e) * 34, rotate: 0 };
   if (m === "pulse") return { scale: 1.02 + Math.sin(t * Math.PI) * 0.08, x: 0, y: 0, rotate: 0 };
   if (m === "epic") return { scale: 1.18 - e * 0.08, x: Math.sin(t * Math.PI * 2) * 20, y: (0.5 - e) * 54, rotate: (0.5 - t) * 0.018 };
+  if (m === "story-reel") return { scale: 1.05 + e * 0.1, x: (index % 2 ? 1 : -1) * (e - 0.5) * 56, y: Math.sin(t * Math.PI) * -18, rotate: (index % 2 ? 1 : -1) * 0.01 };
+  if (m === "mythic-cinema") return { scale: 1.12 + e * 0.08, x: (e - 0.5) * 24, y: (0.5 - e) * 36, rotate: (0.5 - t) * 0.008 };
+  if (m === "ghibli-soft") return { scale: 1.04 + Math.sin(t * Math.PI) * 0.045, x: Math.sin(t * Math.PI * 2) * 16, y: Math.sin(t * Math.PI) * -12, rotate: Math.sin(t * Math.PI * 2) * 0.004 };
+  if (m === "claymation") {
+    const step = Math.floor(t * 8) / 8;
+    return { scale: 1.03 + Math.sin(step * Math.PI) * 0.045, x: Math.sin(step * Math.PI * 2) * 18, y: Math.cos(step * Math.PI * 2) * 10, rotate: Math.sin(step * Math.PI * 2) * 0.012 };
+  }
+  if (m === "pixar-3d") return { scale: 1.06 + e * 0.09, x: Math.sin(t * Math.PI * 2) * 20, y: Math.sin(t * Math.PI) * -16, rotate: Math.sin(t * Math.PI * 2) * 0.01 };
+  if (m === "beat-cut") return { scale: 1 + Math.sin(t * Math.PI * 3) * 0.035, x: 0, y: 0, rotate: Math.sin(t * Math.PI * 2) * 0.006 };
+  if (m === "float-3d") return { scale: 1.08 + Math.sin(t * Math.PI) * 0.09, x: Math.sin(t * Math.PI * 2) * 28, y: Math.cos(t * Math.PI * 2) * 18, rotate: Math.sin(t * Math.PI * 2) * 0.02 };
+  if (m === "smooth-pan") return { scale: 1.11, x: (0.5 - e) * 72 * (index % 2 ? -1 : 1), y: (e - 0.5) * 38, rotate: 0 };
+  if (m === "zoom-swipe") return { scale: 1.24 - e * 0.12, x: (1 - e) * 90 * (index % 2 ? -1 : 1), y: 0, rotate: 0 };
+  if (m === "spotlight") return { scale: 1.03 + e * 0.08, x: Math.sin(t * Math.PI) * 14, y: (0.5 - e) * 22, rotate: 0 };
   return { scale: 1 + e * 0.14, x: (e - 0.5) * 30, y: (0.5 - e) * 24, rotate: 0 };
 }
 
@@ -719,6 +857,91 @@ function drawEffectOverlay(targetCtx, effect, localT) {
     targetCtx.restore();
     drawFilmTexture(targetCtx, width, height, localT);
     drawVignette(targetCtx, width, height, 0.5);
+  }
+}
+
+function drawEditorStyleOverlay(targetCtx, style, localT) {
+  const { width, height } = targetCtx.canvas;
+  if (style === "mythic-cinema") {
+    targetCtx.save();
+    const gradient = targetCtx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, "rgba(255, 188, 82, 0.18)");
+    gradient.addColorStop(0.55, "rgba(255, 255, 255, 0)");
+    gradient.addColorStop(1, "rgba(73, 24, 8, 0.2)");
+    targetCtx.fillStyle = gradient;
+    targetCtx.fillRect(0, 0, width, height);
+    targetCtx.restore();
+  } else if (style === "ghibli-soft") {
+    targetCtx.save();
+    targetCtx.globalAlpha = 0.18;
+    targetCtx.filter = "blur(10px) saturate(1.12) brightness(1.08)";
+    targetCtx.drawImage(targetCtx.canvas, -width * 0.01, -height * 0.01, width * 1.02, height * 1.02);
+    targetCtx.restore();
+  } else if (style === "claymation") {
+    targetCtx.save();
+    targetCtx.globalAlpha = 0.12;
+    targetCtx.fillStyle = "#f1d1a6";
+    for (let y = 0; y < height; y += 11) targetCtx.fillRect(0, y, width, 1);
+    targetCtx.restore();
+  } else if (style === "pixar-3d") {
+    const gradient = targetCtx.createRadialGradient(width * 0.45, height * 0.28, 0, width * 0.45, height * 0.28, Math.max(width, height) * 0.64);
+    gradient.addColorStop(0, "rgba(255, 255, 255, 0.16)");
+    gradient.addColorStop(0.5, "rgba(92, 204, 255, 0.04)");
+    gradient.addColorStop(1, "rgba(0, 0, 0, 0.18)");
+    targetCtx.fillStyle = gradient;
+    targetCtx.fillRect(0, 0, width, height);
+  } else if (style === "spotlight") {
+    const x = width * (0.42 + Math.sin(localT * Math.PI) * 0.16);
+    const y = height * 0.38;
+    const gradient = targetCtx.createRadialGradient(x, y, 0, x, y, Math.max(width, height) * 0.58);
+    gradient.addColorStop(0, "rgba(255, 246, 210, 0.16)");
+    gradient.addColorStop(0.38, "rgba(255, 246, 210, 0.05)");
+    gradient.addColorStop(1, "rgba(0, 0, 0, 0.22)");
+    targetCtx.fillStyle = gradient;
+    targetCtx.fillRect(0, 0, width, height);
+  } else if (style === "beat-cut") {
+    targetCtx.fillStyle = `rgba(255, 255, 255, ${0.08 * Math.max(0, Math.sin(localT * Math.PI * 6))})`;
+    targetCtx.fillRect(0, 0, width, height);
+  }
+}
+
+function drawEditorTransition(targetCtx, style, transitionT, index) {
+  if (transitionT <= 0) return;
+  const { width, height } = targetCtx.canvas;
+  const t = clamp(transitionT, 0, 1);
+
+  if (["zoom-swipe", "story-reel", "mythic-cinema", "pixar-3d"].includes(style)) {
+    targetCtx.save();
+    targetCtx.fillStyle = "rgba(255, 255, 255, 0.16)";
+    const direction = index % 2 ? -1 : 1;
+    const x = direction > 0 ? width * t - width * 0.16 : width * (1 - t) - width * 0.16;
+    targetCtx.translate(x, 0);
+    targetCtx.rotate(direction * 0.08);
+    targetCtx.fillRect(-width * 0.08, -height * 0.1, width * 0.22, height * 1.2);
+    targetCtx.restore();
+  } else if (style === "beat-cut" || style === "claymation") {
+    targetCtx.fillStyle = `rgba(255, 255, 255, ${0.32 * Math.sin(t * Math.PI)})`;
+    targetCtx.fillRect(0, 0, width, height);
+  } else if (style === "float-3d" || style === "ghibli-soft") {
+    targetCtx.fillStyle = `rgba(0, 0, 0, ${0.28 * t})`;
+    targetCtx.fillRect(0, 0, width, height);
+    drawLightSweep(targetCtx, width, height, t);
+  } else if (style === "spotlight") {
+    const gradient = targetCtx.createRadialGradient(
+      width / 2,
+      height / 2,
+      Math.min(width, height) * 0.1,
+      width / 2,
+      height / 2,
+      Math.max(width, height) * (0.38 + t * 0.3),
+    );
+    gradient.addColorStop(0, "rgba(255, 245, 190, 0.18)");
+    gradient.addColorStop(1, `rgba(0, 0, 0, ${0.42 * t})`);
+    targetCtx.fillStyle = gradient;
+    targetCtx.fillRect(0, 0, width, height);
+  } else {
+    targetCtx.fillStyle = `rgba(0, 0, 0, ${0.35 * t})`;
+    targetCtx.fillRect(0, 0, width, height);
   }
 }
 
@@ -869,10 +1092,8 @@ function drawEditorFrame(targetCtx, settings, seconds) {
   targetCtx.restore();
 
   drawEffectOverlay(targetCtx, settings.effect, current.localT);
-  if (transitionT > 0) {
-    targetCtx.fillStyle = `rgba(0, 0, 0, ${0.35 * transitionT})`;
-    targetCtx.fillRect(0, 0, w, h);
-  }
+  drawEditorStyleOverlay(targetCtx, settings.style, current.localT);
+  drawEditorTransition(targetCtx, settings.style, transitionT, current.index);
   drawVignette(targetCtx, w, h, 0.34);
 }
 
@@ -908,7 +1129,7 @@ function previewLoop(now) {
   requestAnimationFrame(previewLoop);
 }
 
-function supportedVideoType(format) {
+function supportedVideoType(format, hasAudio = false) {
   const mp4Types = [
     "video/mp4;codecs=avc1.42E01E",
     "video/mp4;codecs=h264",
@@ -927,6 +1148,7 @@ function supportedVideoType(format) {
   const mp4 = findSupported(mp4Types, "mp4", "MP4");
   const webm = findSupported(webmTypes, "webm", "WebM");
 
+  if (hasAudio && format === "auto") return webm || mp4 || { mime: "", ext: "webm", label: "video" };
   if (format === "mp4") return mp4 || webm;
   if (format === "webm") return webm || mp4;
   return mp4 || webm || { mime: "", ext: "webm", label: "video" };
@@ -991,6 +1213,10 @@ async function createAudioTrackFromFile(file, settings) {
 
 async function createAudioTrack(settings) {
   return createAudioTrackFromFile(audioFile, settings);
+}
+
+function nextAnimationFrame() {
+  return new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
 function canShareVideo(file) {
@@ -1071,8 +1297,9 @@ async function exportVideo() {
     setStatus("Could not prepare audio. Exporting silent video.", true);
   }
 
+  const hasAudioTrack = stream.getAudioTracks().length > 0;
   const chunks = [];
-  const videoType = supportedVideoType(settings.format);
+  const videoType = supportedVideoType(settings.format, hasAudioTrack);
   let recorder;
 
   try {
@@ -1093,17 +1320,25 @@ async function exportVideo() {
     recorder.onstop = resolve;
   });
 
+  if (audioFile && !hasAudioTrack) setStatus("Audio could not be attached. Exporting silent video.", true);
   recorder.start();
   if (audioTrack) audioTrack.start();
-  const totalFrames = Math.ceil(panels.length * settings.duration * settings.fps);
+  const totalDuration = panels.length * settings.duration;
+  const startedAt = performance.now();
+  let lastStatusSecond = -1;
 
-  for (let frame = 0; frame < totalFrames; frame += 1) {
-    const seconds = frame / settings.fps;
-    const panelIndex = Math.floor(seconds / settings.duration);
+  while (true) {
+    const seconds = Math.min((performance.now() - startedAt) / 1000, totalDuration);
+    const panelIndex = Math.min(panels.length - 1, Math.floor(seconds / settings.duration));
     const localT = (seconds % settings.duration) / settings.duration;
     drawFrame(exportCtx, settings, panelIndex, localT);
-    setStatus(`Rendering frame ${frame + 1} of ${totalFrames}...`);
-    await new Promise((resolve) => setTimeout(resolve, 1000 / settings.fps));
+    const statusSecond = Math.floor(seconds);
+    if (statusSecond !== lastStatusSecond) {
+      lastStatusSecond = statusSecond;
+      setStatus(`Rendering ${seconds.toFixed(1)} of ${totalDuration.toFixed(1)} sec...`);
+    }
+    if (seconds >= totalDuration) break;
+    await nextAnimationFrame();
   }
 
   recorder.stop();
@@ -1134,12 +1369,13 @@ async function exportVideo() {
       : settings.format === "webm" && videoType.ext !== "webm"
         ? " WebM is not supported in this browser, so MP4 was used."
         : "";
+  const audioFormatNote = hasAudioTrack && videoType.ext === "mp4" ? " If audio is missing, use Auto mobile friendly or WebM." : "";
   const mobileNote =
     videoType.ext === "webm"
       ? " Some phones, especially iPhones, cannot open WebM; use a browser/device that supports MP4 export if needed."
       : "";
-  const audioNote = audioFile ? " Audio was included." : "";
-  setStatus(`Video exported as ${videoType.label}.${audioNote} Tap YouTube on mobile, then choose YouTube from the share sheet.${fallback}${mobileNote}`);
+  const audioNote = hasAudioTrack ? " Audio was included." : audioFile ? " Audio was not included by this browser." : "";
+  setStatus(`Video exported as ${videoType.label}.${audioNote} Tap YouTube on mobile, then choose YouTube from the share sheet.${fallback}${mobileNote}${audioFormatNote}`);
 }
 
 function downloadPanels() {
@@ -1543,6 +1779,7 @@ function renderEditorTimeline() {
     row.className = `editorScene${index === selectedEditorIndex ? " selected" : ""}`;
     row.draggable = true;
     row.dataset.index = index;
+    row.style.setProperty("--delay", `${Math.min(index * 30, 360)}ms`);
     row.innerHTML = `
       <img src="${item.url}" alt="Editor image ${index + 1}">
       <div>
@@ -1826,8 +2063,9 @@ async function exportEditorVideo() {
     setStatus("Could not prepare editor audio. Exporting silent video.", true);
   }
 
+  const hasAudioTrack = stream.getAudioTracks().length > 0;
   const chunks = [];
-  const videoType = supportedVideoType(els.format.value);
+  const videoType = supportedVideoType(els.format.value, hasAudioTrack);
   let recorder;
 
   try {
@@ -1848,15 +2086,22 @@ async function exportEditorVideo() {
     recorder.onstop = resolve;
   });
 
+  if (editorAudioFile && !hasAudioTrack) setStatus("Editor audio could not be attached. Exporting silent video.", true);
   recorder.start();
   if (audioTrack) audioTrack.start();
-  const totalFrames = Math.ceil(totalDuration * settings.fps);
+  const startedAt = performance.now();
+  let lastStatusSecond = -1;
 
-  for (let frame = 0; frame < totalFrames; frame += 1) {
-    const seconds = frame / settings.fps;
+  while (true) {
+    const seconds = Math.min((performance.now() - startedAt) / 1000, totalDuration);
     drawEditorFrame(exportCtx, settings, seconds);
-    setStatus(`Rendering editor frame ${frame + 1} of ${totalFrames}...`);
-    await new Promise((resolve) => setTimeout(resolve, 1000 / settings.fps));
+    const statusSecond = Math.floor(seconds);
+    if (statusSecond !== lastStatusSecond) {
+      lastStatusSecond = statusSecond;
+      setStatus(`Rendering editor video ${seconds.toFixed(1)} of ${totalDuration.toFixed(1)} sec...`);
+    }
+    if (seconds >= totalDuration) break;
+    await nextAnimationFrame();
   }
 
   recorder.stop();
@@ -1880,7 +2125,9 @@ async function exportEditorVideo() {
   els.videoResult.hidden = false;
   exporting = false;
   els.editorExport.disabled = false;
-  setStatus(`Editor video exported as ${videoType.label}. Preview it below, then download when ready.`);
+  const audioNote = hasAudioTrack ? " Audio was included." : editorAudioFile ? " Audio was not included by this browser." : "";
+  const audioFormatNote = hasAudioTrack && videoType.ext === "mp4" ? " If audio is missing, switch the Video format to Auto or WebM." : "";
+  setStatus(`Editor video exported as ${videoType.label}.${audioNote}${audioFormatNote} Preview it below, then download when ready.`);
 }
 
 function syncImageProviderModel() {
@@ -1965,6 +2212,16 @@ document.querySelector(".libraryAudioDrop").addEventListener("drop", (event) => 
   if (file) setLibraryAudioFile(file);
 });
 
+document.querySelector(".libraryVideoDrop").addEventListener("dragover", (event) => {
+  event.preventDefault();
+});
+
+document.querySelector(".libraryVideoDrop").addEventListener("drop", (event) => {
+  event.preventDefault();
+  const file = [...event.dataTransfer.files].find((item) => item.type.startsWith("video/"));
+  if (file) setLibraryVideoFile(file);
+});
+
 async function loadSampleFromQuery() {
   const sample = new URLSearchParams(location.search).get("sample");
   if (!sample) return;
@@ -2000,8 +2257,13 @@ els.libraryAudioInput.addEventListener("change", (event) => {
   const file = event.target.files?.[0];
   if (file) setLibraryAudioFile(file);
 });
+els.libraryVideoInput.addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  if (file) setLibraryVideoFile(file);
+});
 els.useAudioInEditor.addEventListener("click", useLibraryAudioInEditor);
 els.useAudioInVideo.addEventListener("click", useLibraryAudioInVideo);
+els.mixVideoAudio.addEventListener("click", exportUploadedVideoWithAudio);
 els.editorAudioInput.addEventListener("change", (event) => {
   const file = event.target.files?.[0];
   if (file) setEditorAudioFile(file);

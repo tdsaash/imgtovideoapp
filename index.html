@@ -272,6 +272,16 @@
                   <option value="reveal">Zoom Reveal</option>
                   <option value="pulse">Soft Pulse</option>
                   <option value="epic">Epic Parallax</option>
+                  <option value="story-reel">Story Reel</option>
+                  <option value="mythic-cinema">Mythic Cinema</option>
+                  <option value="ghibli-soft">Hand-Drawn Soft</option>
+                  <option value="claymation">Claymation</option>
+                  <option value="pixar-3d">Pixar 3D</option>
+                  <option value="beat-cut">Beat Cut</option>
+                  <option value="float-3d">3D Float</option>
+                  <option value="smooth-pan">Smooth Pan</option>
+                  <option value="zoom-swipe">Zoom Swipe</option>
+                  <option value="spotlight">Spotlight</option>
                   <option value="mixed">Mixed Styles</option>
                 </select>
               </label>
@@ -324,7 +334,6 @@
             </div>
 
             <div class="actions editorActions">
-              <button id="editorExportBtn" type="button" disabled>Export Editor Video</button>
             </div>
           </div>
 
@@ -370,6 +379,13 @@
           </div>
 
           <div id="audioControls" class="tabPane" role="tabpanel" aria-labelledby="audioTab" hidden>
+            <label class="audioDrop libraryVideoDrop" for="libraryVideoInput">
+              <input id="libraryVideoInput" type="file" accept="video/*" />
+              <span>Video file</span>
+              <strong id="libraryVideoFileName">Add video to mix with audio</strong>
+            </label>
+            <video id="libraryVideoPreview" controls playsinline hidden></video>
+
             <label class="audioDrop libraryAudioDrop" for="libraryAudioInput">
               <input id="libraryAudioInput" type="file" accept="audio/*" />
               <span>Audio file</span>
@@ -380,6 +396,7 @@
             <div class="actions audioActions">
               <button id="useAudioInEditorBtn" type="button" disabled>Use in Editor</button>
               <button id="useAudioInVideoBtn" type="button" disabled>Use in Video</button>
+              <button id="mixVideoAudioBtn" type="button" disabled>Export Video + Audio</button>
             </div>
           </div>
 
@@ -395,6 +412,7 @@
               <div class="previewButtons">
                 <button id="editorPreviewBtn" type="button" disabled>Preview</button>
                 <button id="editorStopBtn" type="button" disabled>Stop</button>
+                <button id="editorExportBtn" type="button" disabled>Export Video</button>
               </div>
               <label>
                 Preview position
