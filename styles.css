@@ -107,7 +107,11 @@ small {
   border-color: var(--accent);
 }
 
-.dropzone input {
+.dropzone input,
+.audioDrop input,
+.editorDrop input,
+.editorAudioDrop input,
+.libraryAudioDrop input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
@@ -123,6 +127,32 @@ small {
   border-radius: 999px;
   font-size: 1.5rem;
   font-weight: 800;
+}
+
+.audioDrop {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  color: var(--muted);
+  background: #151820;
+  border: 1px dashed #565b69;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.audioDrop:hover {
+  border-color: var(--accent-2);
+}
+
+.audioDrop strong {
+  color: var(--text);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+#audioPreview {
+  width: 100%;
+  min-height: 42px;
 }
 
 label {
@@ -142,6 +172,20 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 0 12px;
+}
+
+input[type="range"] {
+  appearance: auto;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 textarea {
@@ -169,8 +213,10 @@ textarea {
 
 .tabButton {
   min-height: 40px;
+  padding: 0 8px;
   color: var(--muted);
   background: transparent;
+  font-size: 0.84rem;
 }
 
 .tabButton.active {
@@ -181,6 +227,12 @@ textarea {
 .tabPane {
   display: grid;
   gap: 18px;
+}
+
+.tabPane.dropActive {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 4px;
+  border-radius: 8px;
 }
 
 .tabPane[hidden] {
@@ -216,6 +268,125 @@ textarea {
 
 .imageActions button:first-child {
   grid-column: 1 / -1;
+}
+
+.editorActions button:last-child {
+  grid-column: 1 / -1;
+}
+
+.gridActions button:first-child {
+  grid-column: 1 / -1;
+}
+
+.audioActions {
+  grid-template-columns: 1fr;
+}
+
+.editorTimeline {
+  display: grid;
+  gap: 10px;
+}
+
+.scrubControl {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  background: #151820;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.scrubControl span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.previewButtons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.editorScene {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 88px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  background: #151820;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: grab;
+  transition:
+    border-color 120ms ease,
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.editorScene:active {
+  cursor: grabbing;
+}
+
+.editorScene.dragging {
+  opacity: 0.48;
+  transform: scale(0.99);
+}
+
+.editorScene.over {
+  border-color: var(--accent);
+  background: #1d2029;
+}
+
+.editorScene.selected {
+  border-color: var(--accent-2);
+  background: #1b2229;
+}
+
+.editorScene img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  background: #05060a;
+  border-radius: 6px;
+}
+
+.editorScene strong {
+  color: var(--text);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.editorScene span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.editorScene input {
+  min-height: 38px;
+  padding: 0 8px;
+}
+
+.photoTools {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  background: #151820;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.photoTools[hidden] {
+  display: none;
+}
+
+#photoEditCanvas {
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  background: #05060a;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: none;
 }
 
 button {
@@ -361,6 +532,16 @@ canvas {
   gap: 12px;
 }
 
+.gridTiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.gridTiles:empty {
+  display: none;
+}
+
 .thumb {
   overflow: hidden;
   background: var(--panel);
@@ -411,6 +592,18 @@ canvas {
   .actions,
   .videoActions {
     grid-template-columns: 1fr;
+  }
+
+  .tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .editorScene {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+
+  .editorScene label {
+    grid-column: 1 / -1;
   }
 
   .actions button:first-child {

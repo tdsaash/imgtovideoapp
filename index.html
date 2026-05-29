@@ -21,6 +21,9 @@
           <div class="tabs" role="tablist" aria-label="Workspace">
             <button id="videoTab" class="tabButton active" type="button" role="tab" aria-selected="true" aria-controls="videoControls">Video</button>
             <button id="imageTab" class="tabButton" type="button" role="tab" aria-selected="false" aria-controls="imageControls">AI Image</button>
+            <button id="editorTab" class="tabButton" type="button" role="tab" aria-selected="false" aria-controls="editorControls">Editor</button>
+            <button id="gridTab" class="tabButton" type="button" role="tab" aria-selected="false" aria-controls="gridControls">Grid Split</button>
+            <button id="audioTab" class="tabButton" type="button" role="tab" aria-selected="false" aria-controls="audioControls">Audio</button>
           </div>
 
           <div id="videoControls" class="tabPane active" role="tabpanel" aria-labelledby="videoTab">
@@ -30,6 +33,13 @@
               <strong>Upload grid image</strong>
               <small>Best for 3 x 5 comic or story panels like your sample.</small>
             </label>
+
+            <label class="audioDrop" for="audioInput">
+              <input id="audioInput" type="file" accept="audio/*" />
+              <span>Audio track</span>
+              <strong id="audioFileName">Add music or voice</strong>
+            </label>
+            <audio id="audioPreview" controls hidden></audio>
 
             <div class="controlGrid">
               <label>
@@ -119,6 +129,33 @@
                 Height
                 <input id="heightInput" type="number" min="320" max="3840" step="10" value="1920" />
               </label>
+              <label>
+                Audio start
+                <input id="audioStartInput" type="number" min="0" step="0.1" value="0" />
+              </label>
+              <label>
+                Audio end
+                <input id="audioEndInput" type="number" min="0" step="0.1" value="0" />
+              </label>
+              <label>
+                Audio volume
+                <input id="audioVolumeInput" type="range" min="0" max="1" step="0.05" value="1" />
+              </label>
+              <label>
+                Fade in
+                <input id="audioFadeInInput" type="number" min="0" step="0.1" value="0" />
+              </label>
+              <label>
+                Fade out
+                <input id="audioFadeOutInput" type="number" min="0" step="0.1" value="0" />
+              </label>
+            </div>
+
+            <div class="switchRow">
+              <label class="check">
+                <input id="fitVideoToAudioInput" type="checkbox" />
+                <span>Fit video to audio</span>
+              </label>
             </div>
 
             <div class="switchRow">
@@ -199,6 +236,153 @@
             </div>
           </div>
 
+          <div id="editorControls" class="tabPane" role="tabpanel" aria-labelledby="editorTab" hidden>
+            <label class="dropzone editorDrop" for="editorImageInput">
+              <input id="editorImageInput" type="file" accept="image/*" multiple />
+              <span class="dropIcon">+</span>
+              <strong>Drop editor images</strong>
+              <small>Add one or more images, then adjust each scene duration.</small>
+            </label>
+
+            <label class="audioDrop editorAudioDrop" for="editorAudioInput">
+              <input id="editorAudioInput" type="file" accept="audio/*" />
+              <span>Editor audio</span>
+              <strong id="editorAudioFileName">Add music or voice</strong>
+            </label>
+            <audio id="editorAudioPreview" controls hidden></audio>
+
+            <div class="controlGrid">
+              <label>
+                Editor width
+                <input id="editorWidthInput" type="number" min="320" max="2160" step="10" value="1080" />
+              </label>
+              <label>
+                Editor height
+                <input id="editorHeightInput" type="number" min="320" max="3840" step="10" value="1920" />
+              </label>
+              <label>
+                Editor FPS
+                <input id="editorFpsInput" type="number" min="12" max="60" value="30" />
+              </label>
+              <label>
+                Animation
+                <select id="editorStyleInput">
+                  <option value="cinematic" selected>Cinematic Push</option>
+                  <option value="drift">Slow Drift</option>
+                  <option value="reveal">Zoom Reveal</option>
+                  <option value="pulse">Soft Pulse</option>
+                  <option value="epic">Epic Parallax</option>
+                  <option value="mixed">Mixed Styles</option>
+                </select>
+              </label>
+              <label>
+                Effect
+                <select id="editorEffectInput">
+                  <option value="none" selected>None</option>
+                  <option value="cinematic-ai">Cinematic AI</option>
+                  <option value="anime-glow">Anime Glow</option>
+                  <option value="action-shake">Action Shake</option>
+                  <option value="dream-blur">Dream Blur</option>
+                  <option value="vintage-film">Vintage Film</option>
+                </select>
+              </label>
+              <label>
+                Audio volume
+                <input id="editorAudioVolumeInput" type="range" min="0" max="1" step="0.05" value="1" />
+              </label>
+            </div>
+
+            <div class="switchRow">
+              <label class="check">
+                <input id="editorFitAudioInput" type="checkbox" />
+                <span>Fit images to audio</span>
+              </label>
+            </div>
+
+            <div id="editorTimeline" class="editorTimeline"></div>
+
+            <div id="editorPhotoTools" class="photoTools" hidden>
+              <canvas id="photoEditCanvas" width="720" height="720"></canvas>
+              <div class="controlGrid">
+                <label>
+                  Zoom
+                  <input id="photoZoomInput" type="range" min="1" max="3" step="0.05" value="1" />
+                </label>
+                <label>
+                  Horizontal
+                  <input id="photoXInput" type="range" min="-1" max="1" step="0.02" value="0" />
+                </label>
+                <label>
+                  Vertical
+                  <input id="photoYInput" type="range" min="-1" max="1" step="0.02" value="0" />
+                </label>
+              </div>
+              <div class="actions">
+                <button id="photoSaveBtn" type="button">Save Image Edit</button>
+                <button id="photoResetBtn" type="button">Reset</button>
+              </div>
+            </div>
+
+            <div class="actions editorActions">
+              <button id="editorExportBtn" type="button" disabled>Export Editor Video</button>
+            </div>
+          </div>
+
+          <div id="gridControls" class="tabPane" role="tabpanel" aria-labelledby="gridTab" hidden>
+            <label class="dropzone gridDrop" for="gridImageInput">
+              <input id="gridImageInput" type="file" accept="image/*" />
+              <span class="dropIcon">+</span>
+              <strong>Drop collage image</strong>
+              <small>Detects straight grid lines and splits the image into tiles.</small>
+            </label>
+
+            <div class="controlGrid">
+              <label>
+                Split mode
+                <select id="gridModeInput">
+                  <option value="lines" selected>Use grid lines</option>
+                  <option value="equal">Equal rows/columns</option>
+                </select>
+              </label>
+              <label>
+                Columns
+                <input id="gridColsInput" type="number" min="1" max="12" value="3" />
+              </label>
+              <label>
+                Rows
+                <input id="gridRowsInput" type="number" min="1" max="12" value="3" />
+              </label>
+              <label>
+                Line sensitivity
+                <input id="gridSensitivityInput" type="range" min="0.15" max="0.75" step="0.05" value="0.35" />
+              </label>
+              <label>
+                Min tile size
+                <input id="gridMinTileInput" type="number" min="20" max="400" step="10" value="80" />
+              </label>
+            </div>
+
+            <div class="actions gridActions">
+              <button id="gridSplitBtn" type="button" disabled>Split Grid</button>
+              <button id="gridUseEditorBtn" type="button" disabled>Use Tiles in Editor</button>
+              <button id="gridDownloadBtn" type="button" disabled>Download Tiles</button>
+            </div>
+          </div>
+
+          <div id="audioControls" class="tabPane" role="tabpanel" aria-labelledby="audioTab" hidden>
+            <label class="audioDrop libraryAudioDrop" for="libraryAudioInput">
+              <input id="libraryAudioInput" type="file" accept="audio/*" />
+              <span>Audio file</span>
+              <strong id="libraryAudioFileName">Add local music or voice</strong>
+            </label>
+            <audio id="libraryAudioPreview" controls hidden></audio>
+
+            <div class="actions audioActions">
+              <button id="useAudioInEditorBtn" type="button" disabled>Use in Editor</button>
+              <button id="useAudioInVideoBtn" type="button" disabled>Use in Video</button>
+            </div>
+          </div>
+
           <div id="status" class="status">Upload an image to begin.</div>
         </aside>
 
@@ -206,6 +390,17 @@
           <div class="previewColumn">
             <div class="previewShell">
               <canvas id="previewCanvas" width="1080" height="1920"></canvas>
+            </div>
+            <div id="editorScrubPanel" class="scrubControl" hidden>
+              <div class="previewButtons">
+                <button id="editorPreviewBtn" type="button" disabled>Preview</button>
+                <button id="editorStopBtn" type="button" disabled>Stop</button>
+              </div>
+              <label>
+                Preview position
+                <input id="editorScrubInput" type="range" min="0" max="0" step="0.05" value="0" disabled />
+              </label>
+              <span id="editorTimeReadout">0.0 / 0.0 sec</span>
             </div>
             <div id="videoResult" class="videoResult" hidden>
               <video id="videoPreview" controls playsinline></video>
@@ -221,6 +416,7 @@
             </div>
           </div>
           <div class="filmstrip" id="filmstrip" aria-label="Split image panels"></div>
+          <div class="gridTiles" id="gridTiles" aria-label="Grid split tiles"></div>
         </section>
       </section>
     </main>

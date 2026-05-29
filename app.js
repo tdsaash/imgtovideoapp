@@ -1,5 +1,8 @@
 const els = {
   imageInput: document.querySelector("#imageInput"),
+  audioInput: document.querySelector("#audioInput"),
+  audioPreview: document.querySelector("#audioPreview"),
+  audioFileName: document.querySelector("#audioFileName"),
   cols: document.querySelector("#colsInput"),
   rows: document.querySelector("#rowsInput"),
   gap: document.querySelector("#gapInput"),
@@ -13,6 +16,12 @@ const els = {
   fps: document.querySelector("#fpsInput"),
   width: document.querySelector("#widthInput"),
   height: document.querySelector("#heightInput"),
+  audioStart: document.querySelector("#audioStartInput"),
+  audioEnd: document.querySelector("#audioEndInput"),
+  audioVolume: document.querySelector("#audioVolumeInput"),
+  audioFadeIn: document.querySelector("#audioFadeInInput"),
+  audioFadeOut: document.querySelector("#audioFadeOutInput"),
+  fitVideoToAudio: document.querySelector("#fitVideoToAudioInput"),
   autoLayout: document.querySelector("#autoLayoutInput"),
   autoGrid: document.querySelector("#autoGridInput"),
   cleanNumbers: document.querySelector("#cleanNumbersInput"),
@@ -20,8 +29,53 @@ const els = {
   blur: document.querySelector("#blurInput"),
   videoTab: document.querySelector("#videoTab"),
   imageTab: document.querySelector("#imageTab"),
+  editorTab: document.querySelector("#editorTab"),
+  gridTab: document.querySelector("#gridTab"),
+  audioTab: document.querySelector("#audioTab"),
   videoControls: document.querySelector("#videoControls"),
   imageControls: document.querySelector("#imageControls"),
+  editorControls: document.querySelector("#editorControls"),
+  gridControls: document.querySelector("#gridControls"),
+  audioControls: document.querySelector("#audioControls"),
+  editorImageInput: document.querySelector("#editorImageInput"),
+  editorAudioInput: document.querySelector("#editorAudioInput"),
+  editorAudioPreview: document.querySelector("#editorAudioPreview"),
+  editorAudioFileName: document.querySelector("#editorAudioFileName"),
+  editorWidth: document.querySelector("#editorWidthInput"),
+  editorHeight: document.querySelector("#editorHeightInput"),
+  editorFps: document.querySelector("#editorFpsInput"),
+  editorStyle: document.querySelector("#editorStyleInput"),
+  editorEffect: document.querySelector("#editorEffectInput"),
+  editorAudioVolume: document.querySelector("#editorAudioVolumeInput"),
+  editorFitAudio: document.querySelector("#editorFitAudioInput"),
+  editorTimeline: document.querySelector("#editorTimeline"),
+  editorScrubPanel: document.querySelector("#editorScrubPanel"),
+  editorScrub: document.querySelector("#editorScrubInput"),
+  editorTimeReadout: document.querySelector("#editorTimeReadout"),
+  editorPhotoTools: document.querySelector("#editorPhotoTools"),
+  photoEditCanvas: document.querySelector("#photoEditCanvas"),
+  photoZoom: document.querySelector("#photoZoomInput"),
+  photoX: document.querySelector("#photoXInput"),
+  photoY: document.querySelector("#photoYInput"),
+  photoSave: document.querySelector("#photoSaveBtn"),
+  photoReset: document.querySelector("#photoResetBtn"),
+  editorPreview: document.querySelector("#editorPreviewBtn"),
+  editorStop: document.querySelector("#editorStopBtn"),
+  editorExport: document.querySelector("#editorExportBtn"),
+  gridImageInput: document.querySelector("#gridImageInput"),
+  gridMode: document.querySelector("#gridModeInput"),
+  gridCols: document.querySelector("#gridColsInput"),
+  gridRows: document.querySelector("#gridRowsInput"),
+  gridSensitivity: document.querySelector("#gridSensitivityInput"),
+  gridMinTile: document.querySelector("#gridMinTileInput"),
+  gridSplit: document.querySelector("#gridSplitBtn"),
+  gridUseEditor: document.querySelector("#gridUseEditorBtn"),
+  gridDownload: document.querySelector("#gridDownloadBtn"),
+  libraryAudioInput: document.querySelector("#libraryAudioInput"),
+  libraryAudioPreview: document.querySelector("#libraryAudioPreview"),
+  libraryAudioFileName: document.querySelector("#libraryAudioFileName"),
+  useAudioInEditor: document.querySelector("#useAudioInEditorBtn"),
+  useAudioInVideo: document.querySelector("#useAudioInVideoBtn"),
   prompt: document.querySelector("#promptInput"),
   imageProvider: document.querySelector("#imageProviderInput"),
   imageStyle: document.querySelector("#imageStyleInput"),
@@ -34,6 +88,7 @@ const els = {
   export: document.querySelector("#exportBtn"),
   status: document.querySelector("#status"),
   filmstrip: document.querySelector("#filmstrip"),
+  gridTiles: document.querySelector("#gridTiles"),
   canvas: document.querySelector("#previewCanvas"),
   videoResult: document.querySelector("#videoResult"),
   videoPreview: document.querySelector("#videoPreview"),
@@ -54,6 +109,23 @@ let videoUrl = null;
 let exportedVideoFile = null;
 let generatedImageUrl = null;
 let generatedImageBlob = null;
+let audioFile = null;
+let audioUrl = null;
+let audioDuration = 0;
+let activeTab = "video";
+let editorItems = [];
+let editorAudioFile = null;
+let editorAudioUrl = null;
+let editorAudioDuration = 0;
+let editorPlaying = false;
+let editorPreviewStart = 0;
+let editorPreviewTime = 0;
+let draggedEditorIndex = null;
+let selectedEditorIndex = null;
+let gridImage = null;
+let gridTiles = [];
+let libraryAudioFile = null;
+let libraryAudioUrl = null;
 
 const ease = (t) => 0.5 - Math.cos(Math.PI * t) / 2;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -64,15 +136,35 @@ function setStatus(message, isError = false) {
 }
 
 function setActiveTab(tabName) {
+  activeTab = tabName;
+  const isVideo = tabName === "video";
   const isImage = tabName === "image";
-  els.videoTab.classList.toggle("active", !isImage);
+  const isEditor = tabName === "editor";
+  const isGrid = tabName === "grid";
+  const isAudio = tabName === "audio";
+  els.videoTab.classList.toggle("active", isVideo);
   els.imageTab.classList.toggle("active", isImage);
-  els.videoTab.setAttribute("aria-selected", String(!isImage));
+  els.editorTab.classList.toggle("active", isEditor);
+  els.gridTab.classList.toggle("active", isGrid);
+  els.audioTab.classList.toggle("active", isAudio);
+  els.videoTab.setAttribute("aria-selected", String(isVideo));
   els.imageTab.setAttribute("aria-selected", String(isImage));
-  els.videoControls.hidden = isImage;
+  els.editorTab.setAttribute("aria-selected", String(isEditor));
+  els.gridTab.setAttribute("aria-selected", String(isGrid));
+  els.audioTab.setAttribute("aria-selected", String(isAudio));
+  els.videoControls.hidden = !isVideo;
   els.imageControls.hidden = !isImage;
-  els.videoControls.classList.toggle("active", !isImage);
+  els.editorControls.hidden = !isEditor;
+  els.gridControls.hidden = !isGrid;
+  els.audioControls.hidden = !isAudio;
+  els.videoControls.classList.toggle("active", isVideo);
   els.imageControls.classList.toggle("active", isImage);
+  els.editorControls.classList.toggle("active", isEditor);
+  els.gridControls.classList.toggle("active", isGrid);
+  els.audioControls.classList.toggle("active", isAudio);
+  els.editorScrubPanel.hidden = !isEditor;
+  if (!isEditor) stopEditorPreview();
+  syncCanvasRatioStyle();
 }
 
 function readSettings() {
@@ -90,11 +182,38 @@ function readSettings() {
     fps: clamp(Number(els.fps.value) || 30, 12, 60),
     width: clamp(Number(els.width.value) || 1080, 320, 2160),
     height: clamp(Number(els.height.value) || 1920, 320, 3840),
+    audioStart: Math.max(0, Number(els.audioStart.value) || 0),
+    audioEnd: Math.max(0, Number(els.audioEnd.value) || 0),
+    audioVolume: clamp(Number(els.audioVolume.value) || 0, 0, 1),
+    audioFadeIn: Math.max(0, Number(els.audioFadeIn.value) || 0),
+    audioFadeOut: Math.max(0, Number(els.audioFadeOut.value) || 0),
+    fitVideoToAudio: els.fitVideoToAudio.checked,
     autoLayout: els.autoLayout.checked,
     autoGrid: els.autoGrid.checked,
     cleanNumbers: els.cleanNumbers.checked,
     captions: els.captions.checked,
     blur: els.blur.checked,
+  };
+}
+
+function audioSelectionDuration(settings, fallbackDuration = audioDuration) {
+  if (!audioFile) return 0;
+  const end = settings.audioEnd > settings.audioStart ? settings.audioEnd : fallbackDuration;
+  return Math.max(0, end - settings.audioStart);
+}
+
+function readEditorSettings() {
+  return {
+    width: clamp(Number(els.editorWidth.value) || 1080, 320, 2160),
+    height: clamp(Number(els.editorHeight.value) || 1920, 320, 3840),
+    fps: clamp(Number(els.editorFps.value) || 30, 12, 60),
+    style: els.editorStyle.value,
+    effect: els.editorEffect.value,
+    frame: "fit",
+    blur: true,
+    captions: false,
+    audioVolume: clamp(Number(els.editorAudioVolume.value) || 0, 0, 1),
+    fitAudio: els.editorFitAudio.checked,
   };
 }
 
@@ -206,6 +325,66 @@ function clearGeneratedVideo() {
   els.videoDownload.removeAttribute("href");
   els.videoShare.hidden = true;
   els.videoResult.hidden = true;
+}
+
+function setAudioFile(file) {
+  if (audioUrl) URL.revokeObjectURL(audioUrl);
+  audioFile = file || null;
+  audioUrl = audioFile ? URL.createObjectURL(audioFile) : null;
+  audioDuration = 0;
+  els.audioFileName.textContent = audioFile ? audioFile.name : "Add music or voice";
+  els.audioPreview.hidden = !audioUrl;
+
+  if (audioUrl) {
+    els.audioPreview.src = audioUrl;
+    els.audioPreview.load();
+    els.audioPreview.onloadedmetadata = () => {
+      audioDuration = Number.isFinite(els.audioPreview.duration) ? els.audioPreview.duration : 0;
+      if (audioDuration > 0) {
+        els.audioEnd.value = audioDuration.toFixed(1);
+        setStatus(`Loaded audio: ${audioFile.name} (${audioDuration.toFixed(1)} sec)`);
+      }
+    };
+    setStatus(`Loaded audio: ${audioFile.name}`);
+  } else {
+    els.audioPreview.removeAttribute("src");
+    els.audioPreview.onloadedmetadata = null;
+    els.audioEnd.value = 0;
+  }
+
+  clearGeneratedVideo();
+}
+
+function setLibraryAudioFile(file) {
+  if (libraryAudioUrl) URL.revokeObjectURL(libraryAudioUrl);
+  libraryAudioFile = file || null;
+  libraryAudioUrl = libraryAudioFile ? URL.createObjectURL(libraryAudioFile) : null;
+  els.libraryAudioFileName.textContent = libraryAudioFile ? libraryAudioFile.name : "Add local music or voice";
+  els.libraryAudioPreview.hidden = !libraryAudioUrl;
+  els.useAudioInEditor.disabled = !libraryAudioFile;
+  els.useAudioInVideo.disabled = !libraryAudioFile;
+
+  if (libraryAudioUrl) {
+    els.libraryAudioPreview.src = libraryAudioUrl;
+    els.libraryAudioPreview.load();
+    setStatus(`Loaded audio file: ${libraryAudioFile.name}`);
+  } else {
+    els.libraryAudioPreview.removeAttribute("src");
+  }
+}
+
+function useLibraryAudioInEditor() {
+  if (!libraryAudioFile) return;
+  setEditorAudioFile(libraryAudioFile);
+  setActiveTab("editor");
+  setStatus(`Audio added to Editor: ${libraryAudioFile.name}`);
+}
+
+function useLibraryAudioInVideo() {
+  if (!libraryAudioFile) return;
+  setAudioFile(libraryAudioFile);
+  setActiveTab("video");
+  setStatus(`Audio added to Video: ${libraryAudioFile.name}`);
 }
 
 function applyVideoRatio() {
@@ -607,15 +786,112 @@ function drawFrame(targetCtx, settings, panelIndex, localT) {
   }
 }
 
+function editorTotalDuration() {
+  return editorItems.reduce((total, item) => total + item.duration, 0);
+}
+
+function updateEditorScrub(seconds = editorPreviewTime) {
+  const total = editorTotalDuration();
+  const value = clamp(seconds, 0, Math.max(0, total));
+  els.editorScrub.max = total.toFixed(2);
+  els.editorScrub.value = value.toFixed(2);
+  els.editorScrub.disabled = total <= 0;
+  els.editorTimeReadout.textContent = `${value.toFixed(1)} / ${total.toFixed(1)} sec`;
+}
+
+function editorItemAtTime(seconds) {
+  let elapsed = 0;
+  for (const item of editorItems) {
+    if (seconds < elapsed + item.duration) {
+      return {
+        item,
+        index: editorItems.indexOf(item),
+        localT: item.duration ? (seconds - elapsed) / item.duration : 0,
+      };
+    }
+    elapsed += item.duration;
+  }
+
+  const last = editorItems[editorItems.length - 1];
+  return last ? { item: last, index: editorItems.length - 1, localT: 1 } : null;
+}
+
+function drawEditorFrame(targetCtx, settings, seconds) {
+  const canvas = targetCtx.canvas;
+  const w = canvas.width;
+  const h = canvas.height;
+  targetCtx.clearRect(0, 0, w, h);
+  targetCtx.fillStyle = "#05060a";
+  targetCtx.fillRect(0, 0, w, h);
+
+  if (!editorItems.length) {
+    targetCtx.fillStyle = "#a9adba";
+    targetCtx.font = "700 42px Inter, sans-serif";
+    targetCtx.textAlign = "center";
+    targetCtx.fillText("Drop images in Editor", w / 2, h / 2);
+    return;
+  }
+
+  const current = editorItemAtTime(seconds);
+  if (!current) return;
+  const next = editorItemAtTime(seconds + 0.18);
+  const transitionT = current.localT > 0.88 && next && next.index !== current.index
+    ? (current.localT - 0.88) / 0.12
+    : 0;
+  const move = movement(settings.style, current.localT, current.index);
+  const shake = effectShake(settings.effect, current.localT, current.index, w);
+  const filter = effectFilter(settings.effect);
+  const bg = coverRect(current.item.image.naturalWidth, current.item.image.naturalHeight, w, h, 1.08);
+  const fg = containRect(current.item.image.naturalWidth, current.item.image.naturalHeight, w * 0.92, h * 0.88, move.scale);
+
+  targetCtx.save();
+  targetCtx.filter = "blur(24px) brightness(0.62) saturate(1.25)";
+  targetCtx.drawImage(current.item.image, bg.x, bg.y, bg.w, bg.h);
+  targetCtx.restore();
+
+  if (settings.effect === "anime-glow") {
+    targetCtx.save();
+    targetCtx.translate(w / 2 + move.x + shake.x, h / 2 + move.y + shake.y);
+    targetCtx.rotate(move.rotate + shake.rotate);
+    targetCtx.globalAlpha = 0.34;
+    targetCtx.filter = "blur(18px) saturate(1.8) brightness(1.18)";
+    targetCtx.drawImage(current.item.image, -fg.w / 2, -fg.h / 2, fg.w, fg.h);
+    targetCtx.restore();
+  }
+
+  targetCtx.save();
+  targetCtx.translate(w / 2 + move.x + shake.x, h / 2 + move.y + shake.y);
+  targetCtx.rotate(move.rotate + shake.rotate);
+  targetCtx.shadowColor = "rgba(0, 0, 0, 0.48)";
+  targetCtx.shadowBlur = 34;
+  targetCtx.filter = filter;
+  targetCtx.drawImage(current.item.image, -fg.w / 2, -fg.h / 2, fg.w, fg.h);
+  targetCtx.restore();
+
+  drawEffectOverlay(targetCtx, settings.effect, current.localT);
+  if (transitionT > 0) {
+    targetCtx.fillStyle = `rgba(0, 0, 0, ${0.35 * transitionT})`;
+    targetCtx.fillRect(0, 0, w, h);
+  }
+  drawVignette(targetCtx, w, h, 0.34);
+}
+
 function previewLoop(now) {
-  const settings = readSettings();
+  const settings = activeTab === "editor" ? readEditorSettings() : readSettings();
   if (els.canvas.width !== settings.width || els.canvas.height !== settings.height) {
     els.canvas.width = settings.width;
     els.canvas.height = settings.height;
-    syncCanvasRatioStyle();
+    els.canvas.style.aspectRatio = `${settings.width} / ${settings.height}`;
   }
 
-  if (panels.length) {
+  if (activeTab === "editor") {
+    const total = editorTotalDuration();
+    const seconds = editorPlaying && total > 0 ? Math.min((now - editorPreviewStart) / 1000, total) : editorPreviewTime;
+    editorPreviewTime = seconds;
+    updateEditorScrub(seconds);
+    drawEditorFrame(ctx, settings, seconds);
+    if (editorPlaying && total > 0 && seconds >= total) stopEditorPreview();
+  } else if (panels.length) {
     const elapsed = (now - previewStart) / 1000;
     const whole = Math.floor(elapsed / settings.duration);
     const localT = (elapsed % settings.duration) / settings.duration;
@@ -654,6 +930,67 @@ function supportedVideoType(format) {
   if (format === "mp4") return mp4 || webm;
   if (format === "webm") return webm || mp4;
   return mp4 || webm || { mime: "", ext: "webm", label: "video" };
+}
+
+async function createAudioTrackFromFile(file, settings) {
+  if (!file) return null;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) {
+    setStatus("This browser cannot mix audio into the export. Exporting silent video.", true);
+    return null;
+  }
+
+  const audioContext = new AudioContextClass();
+  const audioBuffer = await audioContext.decodeAudioData(await file.arrayBuffer());
+  const source = audioContext.createBufferSource();
+  const gain = audioContext.createGain();
+  const destination = audioContext.createMediaStreamDestination();
+  const audioStart = Math.min(settings.audioStart, Math.max(0, audioBuffer.duration - 0.01));
+  const audioEnd = settings.audioEnd > audioStart ? Math.min(settings.audioEnd, audioBuffer.duration) : audioBuffer.duration;
+  const playDuration = Math.max(0.05, audioEnd - audioStart);
+  const fadeIn = Math.min(settings.audioFadeIn, playDuration / 2);
+  const fadeOut = Math.min(settings.audioFadeOut, playDuration / 2);
+
+  source.buffer = audioBuffer;
+  source.loop = false;
+  gain.gain.value = settings.audioVolume;
+  source.connect(gain);
+  gain.connect(destination);
+
+  if (audioContext.state === "suspended") await audioContext.resume();
+
+  return {
+    stream: destination.stream,
+    start() {
+      const now = audioContext.currentTime;
+      gain.gain.cancelScheduledValues(now);
+      if (fadeIn > 0) {
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(settings.audioVolume, now + fadeIn);
+      } else {
+        gain.gain.setValueAtTime(settings.audioVolume, now);
+      }
+
+      if (fadeOut > 0) {
+        gain.gain.setValueAtTime(settings.audioVolume, now + Math.max(0, playDuration - fadeOut));
+        gain.gain.linearRampToValueAtTime(0, now + playDuration);
+      }
+
+      source.start(0, audioStart, playDuration);
+    },
+    close() {
+      try {
+        source.stop();
+      } catch {
+        // The source may already be stopped.
+      }
+      audioContext.close();
+    },
+  };
+}
+
+async function createAudioTrack(settings) {
+  return createAudioTrackFromFile(audioFile, settings);
 }
 
 function canShareVideo(file) {
@@ -714,11 +1051,26 @@ async function exportVideo() {
   exporting = true;
   els.export.disabled = true;
   const settings = readSettings();
+  const selectedAudioDuration = audioSelectionDuration(settings);
+  if (settings.fitVideoToAudio && selectedAudioDuration > 0 && panels.length) {
+    settings.duration = clamp(selectedAudioDuration / panels.length, 0.25, 30);
+  }
   const exportCanvas = document.createElement("canvas");
   exportCanvas.width = settings.width;
   exportCanvas.height = settings.height;
   const exportCtx = exportCanvas.getContext("2d");
   const stream = exportCanvas.captureStream(settings.fps);
+  let audioTrack = null;
+
+  try {
+    audioTrack = await createAudioTrack(settings);
+    if (audioTrack) {
+      audioTrack.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+    }
+  } catch {
+    setStatus("Could not prepare audio. Exporting silent video.", true);
+  }
+
   const chunks = [];
   const videoType = supportedVideoType(settings.format);
   let recorder;
@@ -728,6 +1080,7 @@ async function exportVideo() {
   } catch {
     exporting = false;
     els.export.disabled = false;
+    if (audioTrack) audioTrack.close();
     setStatus("This browser could not start video export with the selected format. Try Auto mobile friendly.", true);
     return;
   }
@@ -741,6 +1094,7 @@ async function exportVideo() {
   });
 
   recorder.start();
+  if (audioTrack) audioTrack.start();
   const totalFrames = Math.ceil(panels.length * settings.duration * settings.fps);
 
   for (let frame = 0; frame < totalFrames; frame += 1) {
@@ -754,6 +1108,7 @@ async function exportVideo() {
 
   recorder.stop();
   await done;
+  if (audioTrack) audioTrack.close();
 
   const blobType = recorder.mimeType || videoType.mime || `video/${videoType.ext}`;
   const blob = new Blob(chunks, { type: blobType });
@@ -783,7 +1138,8 @@ async function exportVideo() {
     videoType.ext === "webm"
       ? " Some phones, especially iPhones, cannot open WebM; use a browser/device that supports MP4 export if needed."
       : "";
-  setStatus(`Video exported as ${videoType.label}. Tap YouTube on mobile, then choose YouTube from the share sheet.${fallback}${mobileNote}`);
+  const audioNote = audioFile ? " Audio was included." : "";
+  setStatus(`Video exported as ${videoType.label}.${audioNote} Tap YouTube on mobile, then choose YouTube from the share sheet.${fallback}${mobileNote}`);
 }
 
 function downloadPanels() {
@@ -801,6 +1157,12 @@ els.imageInput.addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
   await useFile(file);
+});
+
+els.audioInput.addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  setAudioFile(file);
 });
 
 async function useFile(file) {
@@ -927,6 +1289,600 @@ function downloadGeneratedImage() {
   setStatus("Generated image downloaded.");
 }
 
+function hasImageFiles(fileList) {
+  return [...fileList].some((file) => file.type.startsWith("image/"));
+}
+
+async function handleEditorImageDrop(event) {
+  event.preventDefault();
+  els.editorControls.classList.remove("dropActive");
+  if (hasImageFiles(event.dataTransfer.files)) await addEditorImages(event.dataTransfer.files);
+}
+
+function findGridLineBandsFromImage(image, axis, sensitivity) {
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(image, 0, 0);
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const length = axis === "x" ? canvas.width : canvas.height;
+  const crossLength = axis === "x" ? canvas.height : canvas.width;
+  const crossStep = Math.max(1, Math.floor(crossLength / 600));
+  const scores = [];
+  const runScores = [];
+
+  for (let pos = 0; pos < length; pos += 1) {
+    let linePixels = 0;
+    let currentRun = 0;
+    let longestRun = 0;
+    let total = 0;
+
+    for (let cross = 0; cross < crossLength; cross += crossStep) {
+      const x = axis === "x" ? pos : cross;
+      const y = axis === "x" ? cross : pos;
+      const offset = (y * canvas.width + x) * 4;
+      const r = data[offset];
+      const g = data[offset + 1];
+      const b = data[offset + 2];
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const isBrightSeparator = max > 210 && max - min < 58;
+
+      if (isBrightSeparator) {
+        linePixels += 1;
+        currentRun += 1;
+        longestRun = Math.max(longestRun, currentRun);
+      } else {
+        currentRun = 0;
+      }
+      total += 1;
+    }
+
+    scores[pos] = linePixels / total;
+    runScores[pos] = longestRun / total;
+  }
+
+  const threshold = Math.max(0.42, sensitivity);
+  const bands = [];
+  let start = null;
+
+  for (let i = 0; i < scores.length; i += 1) {
+    const isLine = scores[i] >= threshold && runScores[i] >= 0.18;
+    if (isLine && start === null) start = i;
+    if ((!isLine || i === scores.length - 1) && start !== null) {
+      const end = !isLine ? i - 1 : i;
+      const width = end - start + 1;
+      const center = Math.round((start + end) / 2);
+      let strength = 0;
+      for (let j = start; j <= end; j += 1) strength += scores[j] + runScores[j];
+      strength /= width;
+      if (width <= Math.max(10, length * 0.025)) bands.push({ start, end, center, width, strength });
+      start = null;
+    }
+  }
+
+  return bands
+    .filter((band) => band.center > 6 && band.center < length - 6)
+    .filter((band, index, all) => index === 0 || band.center - all[index - 1].center > Math.max(8, length * 0.015));
+}
+
+function chooseExpectedGridBands(bands, length, count) {
+  if (count <= 1) return [];
+  const chosen = [];
+  const maxDistance = length / Math.max(4, count * 2.2);
+
+  for (let i = 1; i < count; i += 1) {
+    const ideal = (length * i) / count;
+    const best = bands
+      .filter((band) => !chosen.includes(band))
+      .filter((band) => Math.abs(band.center - ideal) <= maxDistance)
+      .sort((a, b) => {
+        const aScore = Math.abs(a.center - ideal) - a.strength * maxDistance * 0.45;
+        const bScore = Math.abs(b.center - ideal) - b.strength * maxDistance * 0.45;
+        return aScore - bScore;
+      })[0];
+
+    if (best) chosen.push(best);
+    else chosen.push({ start: Math.round(ideal), end: Math.round(ideal), center: Math.round(ideal), width: 1, strength: 0 });
+  }
+
+  return chosen.sort((a, b) => a.center - b.center);
+}
+
+function gridBandsToRanges(bands, length, minSize) {
+  const separators = bands.map((band) => ({ start: band.start, end: band.end }));
+  const ranges = [];
+  let start = 0;
+
+  separators.forEach((separator) => {
+    const end = separator.start;
+    const leftSize = end - start;
+    const rightSize = length - separator.end - 1;
+    if (leftSize >= minSize && rightSize >= minSize) {
+      ranges.push({ start, end });
+      start = separator.end + 1;
+    }
+  });
+
+  if (length - start >= minSize) ranges.push({ start, end: length });
+  return ranges;
+}
+
+function equalGridRanges(length, count) {
+  const ranges = [];
+  for (let i = 0; i < count; i += 1) {
+    ranges.push({
+      start: Math.round((length * i) / count),
+      end: Math.round((length * (i + 1)) / count),
+    });
+  }
+  return ranges;
+}
+
+function renderGridTiles() {
+  els.gridTiles.innerHTML = "";
+  gridTiles.forEach((tile, index) => {
+    const figure = document.createElement("figure");
+    figure.className = "thumb";
+    figure.innerHTML = `<img alt="Grid tile ${index + 1}" src="${tile.url}"><span>Tile ${index + 1}</span>`;
+    els.gridTiles.appendChild(figure);
+  });
+
+  const hasTiles = gridTiles.length > 0;
+  els.gridUseEditor.disabled = !hasTiles;
+  els.gridDownload.disabled = !hasTiles;
+}
+
+function splitGridImage() {
+  if (!gridImage) {
+    setStatus("Upload a collage image first.", true);
+    return;
+  }
+
+  gridTiles.forEach((tile) => URL.revokeObjectURL(tile.url));
+  gridTiles = [];
+  const sensitivity = Number(els.gridSensitivity.value) || 0.35;
+  const minSize = clamp(Number(els.gridMinTile.value) || 80, 20, 400);
+  const expectedCols = clamp(Number(els.gridCols.value) || 3, 1, 12);
+  const expectedRows = clamp(Number(els.gridRows.value) || 3, 1, 12);
+  const useEqualGrid = els.gridMode.value === "equal";
+  let xRanges = equalGridRanges(gridImage.naturalWidth, expectedCols);
+  let yRanges = equalGridRanges(gridImage.naturalHeight, expectedRows);
+
+  if (!useEqualGrid) {
+    const xBands = findGridLineBandsFromImage(gridImage, "x", sensitivity);
+    const yBands = findGridLineBandsFromImage(gridImage, "y", sensitivity);
+    const xSeparators = chooseExpectedGridBands(xBands, gridImage.naturalWidth, expectedCols);
+    const ySeparators = chooseExpectedGridBands(yBands, gridImage.naturalHeight, expectedRows);
+    const lineXRanges = gridBandsToRanges(xSeparators, gridImage.naturalWidth, minSize);
+    const lineYRanges = gridBandsToRanges(ySeparators, gridImage.naturalHeight, minSize);
+    if (lineXRanges.length === expectedCols) xRanges = lineXRanges;
+    if (lineYRanges.length === expectedRows) yRanges = lineYRanges;
+  }
+
+  yRanges.forEach((yr) => {
+    xRanges.forEach((xr) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = xr.end - xr.start;
+      canvas.height = yr.end - yr.start;
+      canvas.getContext("2d").drawImage(
+        gridImage,
+        xr.start,
+        yr.start,
+        canvas.width,
+        canvas.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+      const url = canvas.toDataURL("image/jpeg", 0.92);
+      gridTiles.push({ canvas, url });
+    });
+  });
+
+  renderGridTiles();
+  setStatus(`Split into ${xRanges.length} columns x ${yRanges.length} rows and created ${gridTiles.length} tiles.`);
+  if (gridTiles.length) useGridTilesInEditor();
+}
+
+async function useGridImage(file) {
+  try {
+    gridImage = await loadImage(file);
+    els.gridSplit.disabled = false;
+    setActiveTab("grid");
+    setStatus(`Loaded collage ${gridImage.naturalWidth} x ${gridImage.naturalHeight}.`);
+    splitGridImage();
+  } catch {
+    setStatus("Could not load that collage image.", true);
+  }
+}
+
+async function useGridTilesInEditor() {
+  if (!gridTiles.length) return;
+  editorItems.forEach((item) => URL.revokeObjectURL(item.url));
+  editorItems = [];
+  selectedEditorIndex = null;
+  els.editorPhotoTools.hidden = true;
+
+  for (let i = 0; i < gridTiles.length; i += 1) {
+    const blob = await new Promise((resolve) => gridTiles[i].canvas.toBlob(resolve, "image/jpeg", 0.92));
+    const file = new File([blob], `grid-tile-${String(i + 1).padStart(2, "0")}.jpg`, { type: "image/jpeg" });
+    const loaded = await loadEditorImage(file);
+    editorItems.push({
+      file,
+      image: loaded.image,
+      originalImage: loaded.image,
+      url: loaded.url,
+      name: file.name,
+      duration: 2.5,
+    });
+  }
+
+  renderEditorTimeline();
+  setActiveTab("editor");
+  setStatus(`Sent ${gridTiles.length} grid tiles to the editor.`);
+}
+
+function downloadGridTiles() {
+  gridTiles.forEach((tile, index) => {
+    const link = document.createElement("a");
+    link.href = tile.url;
+    link.download = `grid-tile-${String(index + 1).padStart(2, "0")}.jpg`;
+    link.click();
+  });
+  setStatus(`Downloaded ${gridTiles.length} grid tiles.`);
+}
+
+function renderEditorTimeline() {
+  els.editorTimeline.innerHTML = "";
+  editorPreviewTime = clamp(editorPreviewTime, 0, editorTotalDuration());
+  editorItems.forEach((item, index) => {
+    const row = document.createElement("div");
+    row.className = `editorScene${index === selectedEditorIndex ? " selected" : ""}`;
+    row.draggable = true;
+    row.dataset.index = index;
+    row.innerHTML = `
+      <img src="${item.url}" alt="Editor image ${index + 1}">
+      <div>
+        <strong>${item.name}</strong>
+        <span>Scene ${index + 1}</span>
+      </div>
+      <label>
+        Seconds
+        <input type="number" min="0.2" max="60" step="0.1" value="${item.duration}">
+      </label>
+    `;
+    const input = row.querySelector("input");
+    input.addEventListener("change", () => {
+      item.duration = clamp(Number(input.value) || 2.5, 0.2, 60);
+      input.value = item.duration;
+      stopEditorPreview();
+      clearGeneratedVideo();
+    });
+    row.addEventListener("click", (event) => {
+      if (event.target.tagName.toLowerCase() === "input") return;
+      selectEditorItem(index);
+    });
+    row.addEventListener("dragstart", (event) => {
+      draggedEditorIndex = index;
+      row.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", String(index));
+    });
+    row.addEventListener("dragend", () => {
+      draggedEditorIndex = null;
+      row.classList.remove("dragging");
+      document.querySelectorAll(".editorScene.over").forEach((scene) => scene.classList.remove("over"));
+    });
+    row.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      if (draggedEditorIndex !== null && draggedEditorIndex !== index) row.classList.add("over");
+    });
+    row.addEventListener("dragleave", () => {
+      row.classList.remove("over");
+    });
+    row.addEventListener("drop", (event) => {
+      event.preventDefault();
+      row.classList.remove("over");
+      const from = draggedEditorIndex ?? Number(event.dataTransfer.getData("text/plain"));
+      reorderEditorItem(from, index);
+    });
+    els.editorTimeline.appendChild(row);
+  });
+
+  const hasItems = editorItems.length > 0;
+  els.editorPreview.disabled = !hasItems;
+  els.editorExport.disabled = !hasItems;
+  updateEditorScrub();
+}
+
+function drawPhotoEditPreview() {
+  if (selectedEditorIndex === null || !editorItems[selectedEditorIndex]) return;
+  const canvas = els.photoEditCanvas;
+  const editCtx = canvas.getContext("2d");
+  const item = editorItems[selectedEditorIndex];
+  const zoom = Number(els.photoZoom.value) || 1;
+  const offsetX = Number(els.photoX.value) || 0;
+  const offsetY = Number(els.photoY.value) || 0;
+  const rect = coverRect(item.originalImage.naturalWidth, item.originalImage.naturalHeight, canvas.width, canvas.height, zoom);
+  const maxX = Math.max(0, (rect.w - canvas.width) / 2);
+  const maxY = Math.max(0, (rect.h - canvas.height) / 2);
+
+  editCtx.clearRect(0, 0, canvas.width, canvas.height);
+  editCtx.fillStyle = "#05060a";
+  editCtx.fillRect(0, 0, canvas.width, canvas.height);
+  editCtx.drawImage(
+    item.originalImage,
+    (canvas.width - rect.w) / 2 + offsetX * maxX,
+    (canvas.height - rect.h) / 2 + offsetY * maxY,
+    rect.w,
+    rect.h,
+  );
+}
+
+function selectEditorItem(index) {
+  selectedEditorIndex = index;
+  const item = editorItems[index];
+  if (!item) return;
+  els.editorPhotoTools.hidden = false;
+  els.photoZoom.value = item.crop?.zoom || 1;
+  els.photoX.value = item.crop?.x || 0;
+  els.photoY.value = item.crop?.y || 0;
+  renderEditorTimeline();
+  drawPhotoEditPreview();
+  setStatus(`Selected ${item.name} for editing.`);
+}
+
+async function savePhotoEdit() {
+  if (selectedEditorIndex === null || !editorItems[selectedEditorIndex]) return;
+  const item = editorItems[selectedEditorIndex];
+  const canvas = els.photoEditCanvas;
+  item.crop = {
+    zoom: Number(els.photoZoom.value) || 1,
+    x: Number(els.photoX.value) || 0,
+    y: Number(els.photoY.value) || 0,
+  };
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.94));
+  const file = new File([blob], item.name, { type: "image/jpeg" });
+  const loaded = await loadEditorImage(file);
+  URL.revokeObjectURL(item.url);
+  item.file = file;
+  item.image = loaded.image;
+  item.url = loaded.url;
+  stopEditorPreview();
+  clearGeneratedVideo();
+  renderEditorTimeline();
+  drawPhotoEditPreview();
+  setStatus(`Saved edits to ${item.name}.`);
+}
+
+function resetPhotoEdit() {
+  if (selectedEditorIndex === null || !editorItems[selectedEditorIndex]) return;
+  const item = editorItems[selectedEditorIndex];
+  item.crop = { zoom: 1, x: 0, y: 0 };
+  els.photoZoom.value = 1;
+  els.photoX.value = 0;
+  els.photoY.value = 0;
+  drawPhotoEditPreview();
+}
+
+function reorderEditorItem(fromIndex, toIndex) {
+  if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex) || fromIndex === toIndex) return;
+  if (fromIndex < 0 || fromIndex >= editorItems.length || toIndex < 0 || toIndex >= editorItems.length) return;
+  const [item] = editorItems.splice(fromIndex, 1);
+  editorItems.splice(toIndex, 0, item);
+  draggedEditorIndex = null;
+  stopEditorPreview();
+  clearGeneratedVideo();
+  renderEditorTimeline();
+  setStatus(`Moved image to scene ${toIndex + 1}.`);
+}
+
+function loadEditorImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => resolve({ image, url });
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error(`Could not load ${file.name}.`));
+    };
+    image.src = url;
+  });
+}
+
+async function addEditorImages(files) {
+  const imageFiles = [...files].filter((file) => file.type.startsWith("image/"));
+  if (!imageFiles.length) return;
+
+  try {
+    for (const file of imageFiles) {
+      const loaded = await loadEditorImage(file);
+      editorItems.push({
+        file,
+        image: loaded.image,
+        originalImage: loaded.image,
+        url: loaded.url,
+        name: file.name,
+        duration: 2.5,
+      });
+    }
+    renderEditorTimeline();
+    setActiveTab("editor");
+    setStatus(`Added ${imageFiles.length} image${imageFiles.length === 1 ? "" : "s"} to the editor.`);
+  } catch (error) {
+    setStatus(error.message || "Could not add editor images.", true);
+  }
+}
+
+function setEditorAudioFile(file) {
+  if (editorAudioUrl) URL.revokeObjectURL(editorAudioUrl);
+  editorAudioFile = file || null;
+  editorAudioUrl = editorAudioFile ? URL.createObjectURL(editorAudioFile) : null;
+  editorAudioDuration = 0;
+  els.editorAudioFileName.textContent = editorAudioFile ? editorAudioFile.name : "Add music or voice";
+  els.editorAudioPreview.hidden = !editorAudioUrl;
+
+  if (editorAudioUrl) {
+    els.editorAudioPreview.src = editorAudioUrl;
+    els.editorAudioPreview.load();
+    els.editorAudioPreview.onloadedmetadata = () => {
+      editorAudioDuration = Number.isFinite(els.editorAudioPreview.duration) ? els.editorAudioPreview.duration : 0;
+      if (editorAudioDuration > 0) {
+        setStatus(`Loaded editor audio: ${editorAudioFile.name} (${editorAudioDuration.toFixed(1)} sec)`);
+      }
+    };
+  } else {
+    els.editorAudioPreview.removeAttribute("src");
+    els.editorAudioPreview.onloadedmetadata = null;
+  }
+
+  stopEditorPreview();
+  clearGeneratedVideo();
+}
+
+function fitEditorImagesToAudio() {
+  if (!els.editorFitAudio.checked || !editorAudioDuration || !editorItems.length) return;
+  const duration = clamp(editorAudioDuration / editorItems.length, 0.2, 60);
+  editorItems.forEach((item) => {
+    item.duration = Number(duration.toFixed(2));
+  });
+  renderEditorTimeline();
+}
+
+async function playEditorPreview() {
+  if (!editorItems.length) return;
+  fitEditorImagesToAudio();
+  clearGeneratedVideo();
+  editorPlaying = true;
+  editorPreviewStart = performance.now() - editorPreviewTime * 1000;
+  els.editorPreview.disabled = true;
+  els.editorStop.disabled = false;
+
+  if (editorAudioFile && editorAudioUrl) {
+    els.editorAudioPreview.currentTime = editorPreviewTime;
+    els.editorAudioPreview.volume = Number(els.editorAudioVolume.value) || 1;
+    try {
+      await els.editorAudioPreview.play();
+    } catch {
+      setStatus("Preview is playing without audio. Tap the audio player if your browser blocks autoplay.", true);
+    }
+  }
+}
+
+function stopEditorPreview() {
+  editorPlaying = false;
+  els.editorPreview.disabled = editorItems.length === 0;
+  els.editorStop.disabled = true;
+  if (els.editorAudioPreview) {
+    els.editorAudioPreview.pause();
+    els.editorAudioPreview.currentTime = editorPreviewTime;
+  }
+  updateEditorScrub();
+}
+
+function pauseEditorForSeek() {
+  editorPlaying = false;
+  els.editorPreview.disabled = editorItems.length === 0;
+  els.editorStop.disabled = true;
+  if (els.editorAudioPreview) els.editorAudioPreview.pause();
+}
+
+async function exportEditorVideo() {
+  if (!editorItems.length || exporting) return;
+  if (!window.MediaRecorder) {
+    setStatus("This browser does not support video export. Try Chrome, Edge, or Safari.", true);
+    return;
+  }
+
+  stopEditorPreview();
+  fitEditorImagesToAudio();
+  exporting = true;
+  els.editorExport.disabled = true;
+
+  const settings = readEditorSettings();
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = settings.width;
+  exportCanvas.height = settings.height;
+  const exportCtx = exportCanvas.getContext("2d");
+  const stream = exportCanvas.captureStream(settings.fps);
+  const totalDuration = editorTotalDuration();
+  let audioTrack = null;
+
+  try {
+    audioTrack = await createAudioTrackFromFile(editorAudioFile, {
+      audioStart: 0,
+      audioEnd: totalDuration,
+      audioFadeIn: 0,
+      audioFadeOut: 0,
+      audioVolume: settings.audioVolume,
+    });
+    if (audioTrack) {
+      audioTrack.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+    }
+  } catch {
+    setStatus("Could not prepare editor audio. Exporting silent video.", true);
+  }
+
+  const chunks = [];
+  const videoType = supportedVideoType(els.format.value);
+  let recorder;
+
+  try {
+    recorder = new MediaRecorder(stream, videoType.mime ? { mimeType: videoType.mime } : undefined);
+  } catch {
+    exporting = false;
+    els.editorExport.disabled = false;
+    if (audioTrack) audioTrack.close();
+    setStatus("This browser could not start editor export. Try Auto mobile friendly.", true);
+    return;
+  }
+
+  recorder.ondataavailable = (event) => {
+    if (event.data.size) chunks.push(event.data);
+  };
+
+  const done = new Promise((resolve) => {
+    recorder.onstop = resolve;
+  });
+
+  recorder.start();
+  if (audioTrack) audioTrack.start();
+  const totalFrames = Math.ceil(totalDuration * settings.fps);
+
+  for (let frame = 0; frame < totalFrames; frame += 1) {
+    const seconds = frame / settings.fps;
+    drawEditorFrame(exportCtx, settings, seconds);
+    setStatus(`Rendering editor frame ${frame + 1} of ${totalFrames}...`);
+    await new Promise((resolve) => setTimeout(resolve, 1000 / settings.fps));
+  }
+
+  recorder.stop();
+  await done;
+  if (audioTrack) audioTrack.close();
+
+  const blobType = recorder.mimeType || videoType.mime || `video/${videoType.ext}`;
+  const blob = new Blob(chunks, { type: blobType });
+  if (videoUrl) URL.revokeObjectURL(videoUrl);
+  videoUrl = URL.createObjectURL(blob);
+  const fileName = `editor-video-${Date.now()}.${videoType.ext}`;
+  exportedVideoFile = new File([blob], fileName, { type: blobType });
+  els.videoPreview.src = videoUrl;
+  els.videoPreview.load();
+  els.videoOpen.href = videoUrl;
+  els.videoDownload.href = videoUrl;
+  els.videoDownload.download = fileName;
+  els.videoOpen.textContent = `Open ${videoType.label}`;
+  els.videoDownload.textContent = `Download ${videoType.label}`;
+  els.videoShare.hidden = !canShareVideo(exportedVideoFile);
+  els.videoResult.hidden = false;
+  exporting = false;
+  els.editorExport.disabled = false;
+  setStatus(`Editor video exported as ${videoType.label}. Preview it below, then download when ready.`);
+}
+
 function syncImageProviderModel() {
   if (els.imageProvider.value === "pollinations") {
     if (els.imageModel.value.startsWith("black-forest") || els.imageModel.value.startsWith("stabilityai") || els.imageModel.value.startsWith("runwayml")) {
@@ -949,6 +1905,66 @@ document.querySelector(".dropzone").addEventListener("drop", async (event) => {
   if (file) await useFile(file);
 });
 
+document.querySelector(".audioDrop").addEventListener("dragover", (event) => {
+  event.preventDefault();
+});
+
+document.querySelector(".audioDrop").addEventListener("drop", (event) => {
+  event.preventDefault();
+  const file = [...event.dataTransfer.files].find((item) => item.type.startsWith("audio/"));
+  if (file) setAudioFile(file);
+});
+
+document.querySelector(".editorDrop").addEventListener("dragover", (event) => {
+  event.preventDefault();
+});
+
+document.querySelector(".editorDrop").addEventListener("drop", handleEditorImageDrop);
+
+[els.editorControls, els.editorTimeline].forEach((target) => {
+  target.addEventListener("dragover", (event) => {
+    if (!hasImageFiles(event.dataTransfer.files)) return;
+    event.preventDefault();
+    els.editorControls.classList.add("dropActive");
+  });
+  target.addEventListener("dragleave", (event) => {
+    if (!els.editorControls.contains(event.relatedTarget)) {
+      els.editorControls.classList.remove("dropActive");
+    }
+  });
+  target.addEventListener("drop", handleEditorImageDrop);
+});
+
+document.querySelector(".editorAudioDrop").addEventListener("dragover", (event) => {
+  event.preventDefault();
+});
+
+document.querySelector(".editorAudioDrop").addEventListener("drop", (event) => {
+  event.preventDefault();
+  const file = [...event.dataTransfer.files].find((item) => item.type.startsWith("audio/"));
+  if (file) setEditorAudioFile(file);
+});
+
+document.querySelector(".gridDrop").addEventListener("dragover", (event) => {
+  event.preventDefault();
+});
+
+document.querySelector(".gridDrop").addEventListener("drop", async (event) => {
+  event.preventDefault();
+  const file = [...event.dataTransfer.files].find((item) => item.type.startsWith("image/"));
+  if (file) await useGridImage(file);
+});
+
+document.querySelector(".libraryAudioDrop").addEventListener("dragover", (event) => {
+  event.preventDefault();
+});
+
+document.querySelector(".libraryAudioDrop").addEventListener("drop", (event) => {
+  event.preventDefault();
+  const file = [...event.dataTransfer.files].find((item) => item.type.startsWith("audio/"));
+  if (file) setLibraryAudioFile(file);
+});
+
 async function loadSampleFromQuery() {
   const sample = new URLSearchParams(location.search).get("sample");
   if (!sample) return;
@@ -966,10 +1982,69 @@ loadSampleFromQuery();
 
 els.videoTab.addEventListener("click", () => setActiveTab("video"));
 els.imageTab.addEventListener("click", () => setActiveTab("image"));
+els.editorTab.addEventListener("click", () => setActiveTab("editor"));
+els.gridTab.addEventListener("click", () => setActiveTab("grid"));
+els.audioTab.addEventListener("click", () => setActiveTab("audio"));
 els.imageProvider.addEventListener("change", syncImageProviderModel);
 els.generateImage.addEventListener("click", generateImageFromPrompt);
 els.useGenerated.addEventListener("click", useGeneratedImage);
 els.downloadGenerated.addEventListener("click", downloadGeneratedImage);
+els.editorImageInput.addEventListener("change", async (event) => {
+  await addEditorImages(event.target.files || []);
+});
+els.gridImageInput.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (file) await useGridImage(file);
+});
+els.libraryAudioInput.addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  if (file) setLibraryAudioFile(file);
+});
+els.useAudioInEditor.addEventListener("click", useLibraryAudioInEditor);
+els.useAudioInVideo.addEventListener("click", useLibraryAudioInVideo);
+els.editorAudioInput.addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  if (file) setEditorAudioFile(file);
+});
+els.editorPreview.addEventListener("click", playEditorPreview);
+els.editorStop.addEventListener("click", stopEditorPreview);
+els.editorExport.addEventListener("click", exportEditorVideo);
+els.editorScrub.addEventListener("pointerdown", () => {
+  pauseEditorForSeek();
+});
+els.editorScrub.addEventListener("input", () => {
+  editorPreviewTime = Number(els.editorScrub.value) || 0;
+  if (els.editorAudioPreview) els.editorAudioPreview.currentTime = editorPreviewTime;
+  updateEditorScrub(editorPreviewTime);
+});
+els.editorScrub.addEventListener("change", () => {
+  editorPreviewTime = Number(els.editorScrub.value) || 0;
+  if (els.editorAudioPreview) els.editorAudioPreview.currentTime = editorPreviewTime;
+  updateEditorScrub(editorPreviewTime);
+});
+els.editorFitAudio.addEventListener("change", () => {
+  fitEditorImagesToAudio();
+  clearGeneratedVideo();
+});
+["photoZoom", "photoX", "photoY"].forEach((key) => {
+  els[key].addEventListener("input", drawPhotoEditPreview);
+});
+els.photoSave.addEventListener("click", savePhotoEdit);
+els.photoReset.addEventListener("click", resetPhotoEdit);
+els.gridSplit.addEventListener("click", splitGridImage);
+els.gridUseEditor.addEventListener("click", useGridTilesInEditor);
+els.gridDownload.addEventListener("click", downloadGridTiles);
+["gridMode", "gridCols", "gridRows", "gridSensitivity", "gridMinTile"].forEach((key) => {
+  els[key].addEventListener("change", () => {
+    if (gridImage) splitGridImage();
+  });
+});
+["editorStyle", "editorEffect", "editorWidth", "editorHeight"].forEach((key) => {
+  els[key].addEventListener("change", () => {
+    stopEditorPreview();
+    clearGeneratedVideo();
+  });
+});
 els.split.addEventListener("click", splitImage);
 els.download.addEventListener("click", downloadPanels);
 els.export.addEventListener("click", exportVideo);
@@ -990,6 +2065,18 @@ els.effect.addEventListener("change", () => {
   clearGeneratedVideo();
   previewStart = performance.now();
   if (panels.length) setStatus(`Applied ${els.effect.selectedOptions[0].textContent} effect to the preview.`);
+});
+
+els.fitVideoToAudio.addEventListener("change", () => {
+  if (!audioFile || !panels.length) return;
+  const settings = readSettings();
+  const selectedAudioDuration = audioSelectionDuration(settings);
+  if (els.fitVideoToAudio.checked && selectedAudioDuration > 0) {
+    els.duration.value = (selectedAudioDuration / panels.length).toFixed(2);
+    previewStart = performance.now();
+    clearGeneratedVideo();
+    setStatus(`Fit video timing to ${selectedAudioDuration.toFixed(1)} sec of audio.`);
+  }
 });
 
 ["width", "height"].forEach((key) => {
