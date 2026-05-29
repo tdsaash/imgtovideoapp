@@ -148,6 +148,12 @@ http
   .createServer(async (req, res) => {
     let pathname = decodeURIComponent(new URL(req.url, `http://localhost:${port}`).pathname);
 
+    if (pathname === "/favicon.ico") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     if (pathname === "/api/generate-image") {
       if (req.method !== "POST") {
         sendJson(res, 405, { error: "Method not allowed." });

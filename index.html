@@ -369,6 +369,34 @@
                 Min tile size
                 <input id="gridMinTileInput" type="number" min="20" max="400" step="10" value="80" />
               </label>
+              <label>
+                Output ratio
+                <select id="gridOutputRatioInput">
+                  <option value="original" selected>Original tile</option>
+                  <option value="9:16">9:16 Shorts</option>
+                  <option value="1:1">1:1 Square</option>
+                  <option value="4:5">4:5 Portrait</option>
+                </select>
+              </label>
+              <label>
+                Output framing
+                <select id="gridOutputFrameInput">
+                  <option value="fit" selected>Fit with backdrop</option>
+                  <option value="contain">Fit entire image</option>
+                  <option value="band">Center band</option>
+                  <option value="fill">Fill crop</option>
+                </select>
+              </label>
+              <label>
+                Background
+                <select id="gridBackgroundInput">
+                  <option value="blur" selected>Blurred image</option>
+                  <option value="cinematic">Cinematic dark</option>
+                  <option value="gold">Golden glow</option>
+                  <option value="cool">Cool gradient</option>
+                  <option value="solid">Solid black</option>
+                </select>
+              </label>
             </div>
 
             <div class="actions gridActions">

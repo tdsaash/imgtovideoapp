@@ -68,6 +68,9 @@ const els = {
   gridRows: document.querySelector("#gridRowsInput"),
   gridSensitivity: document.querySelector("#gridSensitivityInput"),
   gridMinTile: document.querySelector("#gridMinTileInput"),
+  gridOutputRatio: document.querySelector("#gridOutputRatioInput"),
+  gridOutputFrame: document.querySelector("#gridOutputFrameInput"),
+  gridBackground: document.querySelector("#gridBackgroundInput"),
   gridSplit: document.querySelector("#gridSplitBtn"),
   gridUseEditor: document.querySelector("#gridUseEditorBtn"),
   gridDownload: document.querySelector("#gridDownloadBtn"),
@@ -843,10 +846,14 @@ function drawEffectOverlay(targetCtx, effect, localT) {
     targetCtx.restore();
     drawVignette(targetCtx, width, height, 0.38);
   } else if (effect === "dream-blur") {
+    const copy = document.createElement("canvas");
+    copy.width = width;
+    copy.height = height;
+    copy.getContext("2d").drawImage(targetCtx.canvas, 0, 0);
     targetCtx.save();
     targetCtx.globalAlpha = 0.18;
     targetCtx.filter = "blur(14px) brightness(1.08)";
-    targetCtx.drawImage(targetCtx.canvas, -width * 0.015, -height * 0.015, width * 1.03, height * 1.03);
+    targetCtx.drawImage(copy, -width * 0.015, -height * 0.015, width * 1.03, height * 1.03);
     targetCtx.restore();
     drawLightSweep(targetCtx, width, height, 1 - localT);
   } else if (effect === "vintage-film") {
@@ -872,10 +879,14 @@ function drawEditorStyleOverlay(targetCtx, style, localT) {
     targetCtx.fillRect(0, 0, width, height);
     targetCtx.restore();
   } else if (style === "ghibli-soft") {
+    const copy = document.createElement("canvas");
+    copy.width = width;
+    copy.height = height;
+    copy.getContext("2d").drawImage(targetCtx.canvas, 0, 0);
     targetCtx.save();
     targetCtx.globalAlpha = 0.18;
     targetCtx.filter = "blur(10px) saturate(1.12) brightness(1.08)";
-    targetCtx.drawImage(targetCtx.canvas, -width * 0.01, -height * 0.01, width * 1.02, height * 1.02);
+    targetCtx.drawImage(copy, -width * 0.01, -height * 0.01, width * 1.02, height * 1.02);
     targetCtx.restore();
   } else if (style === "claymation") {
     targetCtx.save();
@@ -946,12 +957,27 @@ function drawEditorTransition(targetCtx, style, transitionT, index) {
 }
 
 function drawFrame(targetCtx, settings, panelIndex, localT) {
-  const panel = panels[panelIndex % panels.length];
   const canvas = targetCtx.canvas;
   const w = canvas.width;
   const h = canvas.height;
-  const move = movement(settings.style, localT, panelIndex);
-  const shake = effectShake(settings.effect, localT, panelIndex, w);
+  const safeIndex = Number.isFinite(panelIndex) && panels.length
+    ? ((Math.floor(panelIndex) % panels.length) + panels.length) % panels.length
+    : 0;
+  const panel = panels[safeIndex];
+
+  if (!panel || !panel.canvas) {
+    targetCtx.clearRect(0, 0, w, h);
+    targetCtx.fillStyle = "#05060a";
+    targetCtx.fillRect(0, 0, w, h);
+    targetCtx.fillStyle = "#a9adba";
+    targetCtx.font = "700 42px Inter, sans-serif";
+    targetCtx.textAlign = "center";
+    targetCtx.fillText("Upload and split an image", w / 2, h / 2);
+    return;
+  }
+
+  const move = movement(settings.style, localT, safeIndex);
+  const shake = effectShake(settings.effect, localT, safeIndex, w);
   const filter = effectFilter(settings.effect);
 
   targetCtx.clearRect(0, 0, w, h);
@@ -1656,6 +1682,100 @@ function equalGridRanges(length, count) {
   return ranges;
 }
 
+function outputSizeForRatio(ratio, sourceW, sourceH) {
+  if (ratio === "9:16") return { width: 1080, height: 1920 };
+  if (ratio === "1:1") return { width: 1080, height: 1080 };
+  if (ratio === "4:5") return { width: 1080, height: 1350 };
+  return { width: sourceW, height: sourceH };
+}
+
+function drawGridTileBackground(tileCtx, sourceCanvas, style) {
+  const { width, height } = tileCtx.canvas;
+  tileCtx.fillStyle = "#05060a";
+  tileCtx.fillRect(0, 0, width, height);
+
+  if (style === "blur") {
+    const bg = coverRect(sourceCanvas.width, sourceCanvas.height, width, height, 1.08);
+    tileCtx.save();
+    tileCtx.filter = "blur(26px) brightness(0.62) saturate(1.18)";
+    tileCtx.drawImage(sourceCanvas, bg.x, bg.y, bg.w, bg.h);
+    tileCtx.restore();
+    return;
+  }
+
+  if (style === "cinematic") {
+    const gradient = tileCtx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, "#08090d");
+    gradient.addColorStop(0.52, "#151820");
+    gradient.addColorStop(1, "#05060a");
+    tileCtx.fillStyle = gradient;
+    tileCtx.fillRect(0, 0, width, height);
+    return;
+  }
+
+  if (style === "gold") {
+    const gradient = tileCtx.createRadialGradient(width * 0.5, height * 0.32, 0, width * 0.5, height * 0.32, height * 0.72);
+    gradient.addColorStop(0, "rgba(240, 201, 79, 0.36)");
+    gradient.addColorStop(0.44, "rgba(69, 45, 20, 0.52)");
+    gradient.addColorStop(1, "#05060a");
+    tileCtx.fillStyle = gradient;
+    tileCtx.fillRect(0, 0, width, height);
+    return;
+  }
+
+  if (style === "cool") {
+    const gradient = tileCtx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, "#10252c");
+    gradient.addColorStop(0.5, "#151820");
+    gradient.addColorStop(1, "#221a34");
+    tileCtx.fillStyle = gradient;
+    tileCtx.fillRect(0, 0, width, height);
+  }
+}
+
+function formatGridTile(sourceCanvas) {
+  const ratio = els.gridOutputRatio.value;
+  const frame = els.gridOutputFrame.value;
+  const size = outputSizeForRatio(ratio, sourceCanvas.width, sourceCanvas.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = size.width;
+  canvas.height = size.height;
+  const tileCtx = canvas.getContext("2d");
+
+  if (ratio !== "original" && (frame === "fit" || frame === "contain" || frame === "band")) {
+    drawGridTileBackground(tileCtx, sourceCanvas, els.gridBackground.value);
+  } else {
+    tileCtx.fillStyle = "#05060a";
+    tileCtx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  let rect;
+  if (frame === "fill") {
+    rect = coverRect(sourceCanvas.width, sourceCanvas.height, canvas.width, canvas.height, 1);
+  } else if (frame === "band") {
+    const scale = canvas.width / sourceCanvas.width;
+    rect = {
+      x: 0,
+      y: (canvas.height - sourceCanvas.height * scale) / 2,
+      w: canvas.width,
+      h: sourceCanvas.height * scale,
+    };
+  } else if (frame === "contain") {
+    rect = containRect(sourceCanvas.width, sourceCanvas.height, canvas.width, canvas.height, 1);
+  } else {
+    rect = containRect(sourceCanvas.width, sourceCanvas.height, canvas.width * 0.92, canvas.height * 0.9, 1);
+  }
+  const x = frame === "fill" ? rect.x : (canvas.width - rect.w) / 2;
+  const y = frame === "fill" ? rect.y : (canvas.height - rect.h) / 2;
+  tileCtx.drawImage(sourceCanvas, x, y, rect.w, rect.h);
+
+  if (ratio !== "original" && (frame === "fit" || frame === "contain" || frame === "band")) {
+    drawVignette(tileCtx, canvas.width, canvas.height, 0.28);
+  }
+
+  return canvas;
+}
+
 function renderGridTiles() {
   els.gridTiles.innerHTML = "";
   gridTiles.forEach((tile, index) => {
@@ -1713,8 +1833,9 @@ function splitGridImage() {
         canvas.width,
         canvas.height,
       );
-      const url = canvas.toDataURL("image/jpeg", 0.92);
-      gridTiles.push({ canvas, url });
+      const outputCanvas = formatGridTile(canvas);
+      const url = outputCanvas.toDataURL("image/jpeg", 0.92);
+      gridTiles.push({ canvas: outputCanvas, url });
     });
   });
 
@@ -2296,7 +2417,7 @@ els.photoReset.addEventListener("click", resetPhotoEdit);
 els.gridSplit.addEventListener("click", splitGridImage);
 els.gridUseEditor.addEventListener("click", useGridTilesInEditor);
 els.gridDownload.addEventListener("click", downloadGridTiles);
-["gridMode", "gridCols", "gridRows", "gridSensitivity", "gridMinTile"].forEach((key) => {
+["gridMode", "gridCols", "gridRows", "gridSensitivity", "gridMinTile", "gridOutputRatio", "gridOutputFrame", "gridBackground"].forEach((key) => {
   els[key].addEventListener("change", () => {
     if (gridImage) splitGridImage();
   });
